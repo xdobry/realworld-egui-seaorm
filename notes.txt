@@ -1,0 +1,62 @@
+ C:\devsoft\postgres\pgsql\bin\psql.exe -U realworld
+
+ # Probleme
+
+ - db connection zu postgres (oder sogar sqlite , es ist demo)
+ - 
+ 
+ - Architektur
+  - wrap component and page messages
+  - reuse page for - edit, new, info
+  - Es gibt ein UICommand für laden von Article (Aber es kann für Edit oder Show benutzt werden. Man muss rückgabe token haben Intend)
+  - Views für tables (nur das was man braucht)
+  - Wie zeige ich referenzen 
+    Extra View elemente
+  - Löschen
+  - Zeige Referenzen (als subnotes)
+  - Tabelle mit Suchmaske (zeige nicht alle)
+  - Kann man die Enums aufteilen (durch wrappen), Enums als Template
+  - Wie liegt man n:m beziehungen
+
+- Architectur Todo
+  - Implementiere Task die Eingabe und Ausgabe typensicher haben (wie eine Methoden signatur)
+  - UIComponent (kann eigene UICommand einstellen und bekomm antworten - zB um liste der user für auswahl zu laden)
+  - Benutzung der masken in verschiedenen kontexten (Show, Update, Create) Tables (List, Auswahl)  
+
+#[derive(FromQueryResult)]
+struct ArticleView {
+    id: i32,
+    title: String,
+    author_name: Option<String>,
+}
+
+Query:
+
+let data = Article::find()
+    .select_only()
+    .column(article::Column::Id)
+    .column(article::Column::Title)
+    .column_as(author::Column::Name, "author_name")
+    .join(JoinType::LeftJoin, article::Relation::Author.def())
+    .into_model::<ArticleView>()
+    .all(db)
+    .await?;
+
+
+
+    use sea_orm::FromQueryResult;
+
+#[derive(Debug, FromQueryResult)]
+struct ArticlePreview {
+    pub id: i32,
+    pub title: String,
+}
+
+
+let articles: Vec<ArticlePreview> = Entity::find()
+    .select_only()
+    .column(Column::Id)
+    .column(Column::Title)
+    .into_model::<ArticlePreview>()
+    .all(db)
+    .await?;

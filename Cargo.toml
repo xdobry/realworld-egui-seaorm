@@ -1,0 +1,2 @@
+[workspace]
+members = ["core","models", "ui", "fatclient","quic-server","quic-client"]

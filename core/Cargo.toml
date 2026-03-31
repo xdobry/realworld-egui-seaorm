@@ -1,0 +1,9 @@
+[package]
+name = "core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+models = { path="../models" }
+sea-orm = { version = "2.0.0-rc"}
+chrono = "0.4.44"
