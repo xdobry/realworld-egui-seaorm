@@ -1,8 +1,12 @@
-use models::entity::comments::ActiveModel;
-use sea_orm::{ActiveValue, FromQueryResult, prelude::DateTimeWithTimeZone};
+use models::entity::comments::{ActiveModel, Entity, Column, Model};
+use sea_orm::Iterable;
+use sea_orm::{FromQueryResult, prelude::DateTimeWithTimeZone};
 use sea_orm::entity::prelude::*;
+use serde::{Serialize, Deserialize};
 
-#[derive(FromQueryResult, Default, Clone)]
+use crate::dto::{ChangeRecord};
+
+#[derive(FromQueryResult, Default, Clone, Serialize, Deserialize, Debug)]
 pub struct CommentAuthor {
     pub id: Uuid,
     pub body: String,
@@ -14,19 +18,23 @@ pub struct CommentAuthor {
 }
 
 impl CommentAuthor {
-    pub fn to_active_model(&self) -> ActiveModel {
-        ActiveModel {
-            id: ActiveValue::Set(self.id),
-            article_id: ActiveValue::Set(self.article_id),
-            author_id: ActiveValue::Set(self.author_id),
-            body: ActiveValue::Set(self.body.clone()),
-            created_at: ActiveValue::Set(self.created_at),
-            updated_at: ActiveValue::Set(self.updated_at),
+    pub fn to_model(&self) -> Model {
+        Model {
+            id: self.id,
+            article_id: self.article_id,
+            author_id: self.author_id,
+            body: self.body.clone(),
+            created_at: self.created_at,
+            updated_at: self.updated_at,
         }
+    }
+
+    pub fn to_change_record(&self, orig: &Model) -> ChangeRecord {
+        ChangeRecord::from_models::<Entity>(&self.to_model(), orig)
     }
 }
 
-#[derive(FromQueryResult, Default, Clone)]
+#[derive(FromQueryResult, Default, Clone, Serialize, Deserialize, Debug)]
 pub struct CommentArticle {
     pub id: Uuid,
     pub body: String,

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+app-core = { package="core", path="../core" }
 quinn = "0.11.9"
 tokio = { version= "1.50.0", features = ["full"] }
 tracing = { version = "0.1.10", default-features = false, features = ["std"] }
@@ -15,3 +16,4 @@ rcgen = "0.14"
 tracing-subscriber = { version = "0.3.0", default-features = false, features = ["env-filter", "fmt", "ansi", "time", "local-time"] }
 directories-next = "2"
 proto = { package = "quinn-proto", version = "0.11.14", default-features = false }
+wincode = "0.5.0"

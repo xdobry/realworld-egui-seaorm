@@ -7,3 +7,6 @@ edition = "2024"
 models = { path="../models" }
 sea-orm = { version = "2.0.0-rc"}
 chrono = "0.4.44"
+serde = { version= "1.0.228", features = ["derive"] }
+uuid = { version = "1.22.0", features = ["v4"] }
+time = "0.3.47"

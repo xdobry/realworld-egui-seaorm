@@ -1,8 +1,9 @@
 use sea_orm::DbErr;
 use sea_orm::entity::prelude::*;
 
-use crate::{article_tags::dto::ArticleTagUI, articles::dto::ArticleUI};
+use crate::{article_tags::dto::ArticleTagUI, articles::dto::ArticleUI, dto::ChangeRecord};
 use models::entity::{article_tags, articles::{self}};
+use serde::{Serialize, Deserialize};
 
 pub trait Api {
     async fn load_articles(&self) -> Result<Vec<articles::Model>, DbErr>;
@@ -14,14 +15,16 @@ pub trait Api {
     async fn insert_article_tags(&self, article_tag: article_tags::ActiveModel) -> Result<(),DbErr>;
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 pub enum ArticleCommand {
     Reload,
-    Create(articles::ActiveModel),
-    Update(articles::ActiveModel),
+    Create(articles::Model),
+    Update(ChangeRecord),
     Load(Uuid),
     Delete(Uuid),
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 pub enum ArticleResult {
     Articles(Vec<articles::Model>),
     Article(ArticleUI),

@@ -1,17 +1,11 @@
 [package]
-name = "fatclient"
+name = "server-core"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-server-core = { path="../server-core" }
 core = { path="../core" }
 ui = { path="../ui" }
 models = { path="../models" }
-uuid = { version = "1.22.0", features = ["v4"] }
-eframe = "0.33.3"
-egui = "0.33.3"
-egui_extras = "0.33.3"
 sea-orm = { version = "2.0.0-rc", features = [ "sqlx-postgres", "runtime-tokio-native-tls", "macros" ] }
 tokio =  { version = "1.50.0", features=["full"] }
-chrono = "0.4.44"

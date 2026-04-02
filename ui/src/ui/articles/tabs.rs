@@ -1,6 +1,5 @@
 use egui::{Id, Modal};
-use sea_orm::{ActiveValue, prelude::DateTimeWithTimeZone};
-use tokio::sync::mpsc;
+use sea_orm::{prelude::DateTimeWithTimeZone};
 use uuid::Uuid;
 
 use crate::{api::CommandBus, ui::{article_favorites::tables::show_article_favorites_table, 
@@ -9,7 +8,7 @@ use crate::{api::CommandBus, ui::{article_favorites::tables::show_article_favori
     core::{page::{Form, PageAction, UIBus}, tables::{TableAction, TableMode}}, 
     tags::tables::show_tags_table, users::tables::show_users_table}};
 
-use models::entity::{article_favorites, article_tags, tags, users};
+use models::entity::{article_favorites, article_tags, comments, tags, users};
 use core::comments::api::{CommentCommand, CommentResult};
 use core::article_tags::dto::ArticleTagUI;
 use core::comments::dto::CommentAuthor;
@@ -60,11 +59,10 @@ impl Form for ArticleTagsTab {
                         match table_action {
                             TableAction::SelectItem(uuid,_label) => {
                                 let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
-                                let article_tag = article_tags::ActiveModel {
-                                    tag_id: ActiveValue::Set(uuid),
-                                    article_id: ActiveValue::Set(self.article_id),
-                                    created_at: ActiveValue::Set(now),
-                                    ..Default::default()
+                                let article_tag = article_tags::Model {
+                                    tag_id: uuid,
+                                    article_id: self.article_id,
+                                    created_at: now,
                                 };
                                 self.event_bus.send_task(tx,UICommand::ArticleTag(ArticleTagCommand::Create(article_tag)));
                                 ui.close();
@@ -175,11 +173,10 @@ impl Form for ArticleFavoriteTab {
                         match table_action {
                             TableAction::SelectItem(uuid,_label) => {
                                 let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
-                                let article_tag = article_favorites::ActiveModel {
-                                    user_id: ActiveValue::Set(uuid),
-                                    article_id: ActiveValue::Set(self.article_id),
-                                    created_at: ActiveValue::Set(now),
-                                    ..Default::default()
+                                let article_tag = article_favorites::Model {
+                                    user_id: uuid,
+                                    article_id: self.article_id,
+                                    created_at: now,
                                 };
                                 self.event_bus.send_task(tx,UICommand::ArticleFavorite(ArticleFavoriteCommand::Create(article_tag)));
                                 ui.close();
@@ -251,7 +248,7 @@ impl ArticleFavoriteTab {
 pub struct ArticleCommentsTab {
     article_id: Uuid,
     article_comments: Option<Vec<CommentAuthor>>,
-    comment_form: Option<CommentForm>,
+    comment_form: Option<(CommentForm, comments::Model)>,
     event_bus: UIBus,
     initialized: bool,
     comment_edit: bool,
@@ -275,8 +272,9 @@ impl Form for ArticleCommentsTab {
                     created_at: now,
                     updated_at: now,
                 };
+                let comment_orig = comment_author.to_model();
                 self.comment_edit = false;
-                self.comment_form = Some(CommentForm::new(comment_author))
+                self.comment_form = Some((CommentForm::new(comment_author),comment_orig))
             }
             let table_action = show_comments_author_table(ui, article_comments, TableMode::EditDelete);
             match table_action {
@@ -286,7 +284,7 @@ impl Form for ArticleCommentsTab {
                 TableAction::SelectItem(id,_label) => {
                     let comment_to_edit = article_comments.iter().find(|c| c.id == id);
                     if let Some(comment_to_edit) = comment_to_edit {
-                        self.comment_form = Some(CommentForm::new(comment_to_edit.clone()));
+                        self.comment_form = Some((CommentForm::new(comment_to_edit.clone()), comment_to_edit.to_model()));
                         self.comment_edit = true;
                     }
                 }
@@ -294,7 +292,7 @@ impl Form for ArticleCommentsTab {
                     
                 }
             }
-            if let Some(comment_form) = self.comment_form.as_mut() {
+            if let Some((comment_form, comment_orig)) = self.comment_form.as_mut() {
                 let modal = Modal::new(Id::new("mod_add_tag")).show(ui.ctx(), |ui| {
                     ui.set_width(350.0);
                     comment_form.show_ui(ui, tx);
@@ -307,13 +305,13 @@ impl Form for ArticleCommentsTab {
                             }
                             if self.comment_edit {
                                 if ui.button("Edit").clicked() {
-                                    let comment_model = comment_form.comment.to_active_model();
-                                    self.event_bus.send_task(tx,UICommand::Comment(CommentCommand::Update(comment_model)));
+                                    let change_record = comment_form.comment.to_change_record(comment_orig);
+                                    self.event_bus.send_task(tx,UICommand::Comment(CommentCommand::Update(change_record)));
                                     ui.close();
                                 }
                             } else {
                                 if ui.button("Create").clicked() {
-                                    let comment_model = comment_form.comment.to_active_model();
+                                    let comment_model = comment_form.comment.to_model();
                                     self.event_bus.send_task(tx,UICommand::Comment(CommentCommand::Create(comment_model)));
                                     ui.close();
                                 }
@@ -354,7 +352,7 @@ impl Form for ArticleCommentsTab {
                 }
             }
         }
-        if let Some(comment_form) = self.comment_form.as_mut() {
+        if let Some((comment_form, _)) = self.comment_form.as_mut() {
             comment_form.update(tx, emit);
         }
     }

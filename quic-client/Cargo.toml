@@ -16,3 +16,4 @@ tracing-subscriber = { version = "0.3.0", default-features = false, features = [
 directories-next = "2"
 proto = { package = "quinn-proto", version = "0.11.14", default-features = false }
 url = "2"
+wincode = "0.5.0"

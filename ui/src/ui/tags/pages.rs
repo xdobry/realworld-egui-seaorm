@@ -113,7 +113,7 @@ impl Page for TagNew {
             match self.page_state {
                 PageState::Initial => {
                     if ui.button("Create").clicked() {
-                        self.event_bus.send_task(tx, UICommand::Tag(TagCommand::Create(self.tag.to_active_model())));
+                        self.event_bus.send_task(tx, UICommand::Tag(TagCommand::Create(self.tag.to_model())));
                         self.page_state = PageState::Running;
                     }
                 },
@@ -181,7 +181,7 @@ impl Page for TagEdit {
             match self.page_state {
                 PageState::Initial => {
                     if ui.button("Update").clicked() {
-                        let _ = self.event_bus.send_task(tx, UICommand::Tag(TagCommand::Update(self.tag.to_active_model_update(&self.orig_tag))));
+                        let _ = self.event_bus.send_task(tx, UICommand::Tag(TagCommand::Update(self.tag.to_change_record(&self.orig_tag))));
                         self.page_state = PageState::Running;
                     }
                 },

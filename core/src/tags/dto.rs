@@ -1,9 +1,12 @@
-use sea_orm::{ActiveValue, prelude::DateTimeWithTimeZone};
+use sea_orm::Iterable;
+use sea_orm::{prelude::DateTimeWithTimeZone};
 use sea_orm::entity::prelude::*;
+use serde::{Serialize, Deserialize};
+use models::entity::tags::{ActiveModel, Entity, Column, Model};
 
-use models::entity::tags::{ActiveModel, Model};
+use crate::dto::{ChangeRecord};
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Serialize, Deserialize, Debug)]
 pub struct TagUI {
     pub id: Uuid,
     pub name: String,
@@ -19,24 +22,16 @@ impl TagUI {
         }
     }
 
-    pub fn to_active_model(&self) -> ActiveModel {
-        ActiveModel {
-            id: ActiveValue::Set(self.id),
-            name: ActiveValue::Set(self.name.clone()),
-            created_at: ActiveValue::Set(self.created_at),
-            ..Default::default()
+    pub fn to_model(&self) -> Model {
+        Model {
+            id: self.id,
+            name: self.name.clone(),
+            created_at: self.created_at,
         }
     }
 
-    pub fn to_active_model_update(&self, orig: &Model) -> ActiveModel {
-        let mut am: ActiveModel = orig.clone().into();
-        if orig.name != self.name {
-            am.name = ActiveValue::Set(self.name.clone());
-        }
-        if orig.created_at != self.created_at {
-            am.created_at = ActiveValue::Set(self.created_at);
-        }
-        am
+    pub fn to_change_record(&self, orig: &Model) -> ChangeRecord {
+        ChangeRecord::from_models::<Entity>(&self.to_model(), orig)
     }
 
 }

@@ -124,7 +124,7 @@ impl Page for ArticleNew {
             match self.page_state {
                 PageState::Initial => {
                     if ui.button("Create").clicked() {
-                        self.event_bus.send_task(tx,UICommand::Article(ArticleCommand::Create(self.article_form.article.to_active_model())));
+                        self.event_bus.send_task(tx,UICommand::Article(ArticleCommand::Create(self.article_form.article.to_model())));
                         self.page_state = PageState::Running;
                     }
                 },
@@ -202,7 +202,7 @@ impl Page for ArticleEdit {
             match self.page_state {
                 PageState::Initial => {
                     if ui.button("Update").clicked() {
-                        self.event_bus.send_task(tx,UICommand::Article(ArticleCommand::Update(self.article_form.article.to_active_model_update(&self.orig_article))));
+                        self.event_bus.send_task(tx,UICommand::Article(ArticleCommand::Update(self.article_form.article.to_change_record(&self.orig_article))));
                         self.page_state = PageState::Running;
                     }
                 },

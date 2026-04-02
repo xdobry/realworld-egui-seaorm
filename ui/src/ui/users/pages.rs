@@ -12,6 +12,8 @@ use crate::ui::users::tabs::{UserFavoritesTab, UserFollowersTab};
 use crate::ui::core::page::Form;
 
 use models::entity::users;
+use sea_orm::prelude::DateTimeWithTimeZone;
+use uuid::Uuid;
 
 pub struct UserTable {
     users: Vec<users::Model>,
@@ -24,6 +26,16 @@ impl Page for UserTable {
         ui.horizontal(|ui| {
             if ui.button("Reload").clicked() {
                 self.event_bus.send_task(tx, UICommand::User(UserCommand::Reload));
+            }
+            if ui.button("Create User").clicked() {
+                let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
+                let new_user = UserUI {
+                    id: Uuid::new_v4(),
+                    created_at: now,
+                    updated_at: now,
+                    ..Default::default()
+                };               
+                page_action = PageAction::AddPage(Box::new(UserNew::new(new_user)));
             }
             if ui.button("Close").clicked() {
                 page_action = PageAction::Close;
@@ -50,9 +62,6 @@ impl Page for UserTable {
                         }
                         UserResult::Users(users) => {
                             self.users = users;
-                        }
-                        _ => {
-
                         }
                     }
                 }
@@ -117,7 +126,7 @@ impl Page for UserNew {
             match self.page_state {
                 PageState::Initial => {
                     if ui.button("Create").clicked() {
-                        self.event_bus.send_task(tx,UICommand::User(UserCommand::Create(self.user.to_active_model())));
+                        self.event_bus.send_task(tx,UICommand::User(UserCommand::Create(self.user.to_model())));
                         self.page_state = PageState::Running;
                     }
                 },
@@ -194,7 +203,7 @@ impl Page for UserEdit {
             match self.page_state {
                 PageState::Initial => {
                     if ui.button("Update").clicked() {
-                        self.event_bus.send_task(tx,UICommand::User(UserCommand::Update(self.user.to_active_model_update(&self.orig_user))));
+                        self.event_bus.send_task(tx,UICommand::User(UserCommand::Update(self.user.to_change_record(&self.orig_user))));
                         self.page_state = PageState::Running;
                     }
                 },

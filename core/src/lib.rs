@@ -6,3 +6,4 @@ pub mod comments;
 pub mod article_favorites;
 pub mod user_follows;
 pub mod api;
+pub mod dto;

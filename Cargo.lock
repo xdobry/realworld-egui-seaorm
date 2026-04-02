@@ -1137,6 +1137,9 @@ dependencies = [
  "chrono",
  "models",
  "sea-orm",
+ "serde",
+ "time",
+ "uuid",
 ]
 
 [[package]]
@@ -1771,6 +1774,7 @@ dependencies = [
  "egui_extras",
  "models",
  "sea-orm",
+ "server-core",
  "tokio",
  "ui",
  "uuid",
@@ -2903,6 +2907,7 @@ name = "models"
 version = "0.1.0"
 dependencies = [
  "sea-orm",
+ "serde",
 ]
 
 [[package]]
@@ -3571,6 +3576,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
+name = "pastey"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b867cad97c0791bbd3aaa6472142568c6c9e8f71937e98379f584cfb0cf35bec"
+
+[[package]]
 name = "pem"
 version = "3.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3911,6 +3922,7 @@ dependencies = [
  "tracing-futures",
  "tracing-subscriber",
  "url",
+ "wincode",
 ]
 
 [[package]]
@@ -3919,6 +3931,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "core",
  "directories-next",
  "quinn",
  "quinn-proto",
@@ -3928,6 +3941,7 @@ dependencies = [
  "tracing",
  "tracing-futures",
  "tracing-subscriber",
+ "wincode",
 ]
 
 [[package]]
@@ -4708,6 +4722,17 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "server-core"
+version = "0.1.0"
+dependencies = [
+ "core",
+ "models",
+ "sea-orm",
+ "tokio",
+ "ui",
 ]
 
 [[package]]
@@ -6186,6 +6211,18 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "wincode"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b32acb3b7c291af87820e4339459a2c61c24fd13be8809aab2464aed6decf376"
+dependencies = [
+ "pastey",
+ "proc-macro2",
+ "quote",
+ "thiserror 2.0.18",
+]
 
 [[package]]
 name = "windows"

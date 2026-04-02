@@ -53,11 +53,10 @@ impl Form for UserFollowersTab {
                         match table_action {
                             TableAction::SelectItem(uuid,_label) => {
                                 let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
-                                let user_follower = user_follows::ActiveModel {
-                                    follower_id: ActiveValue::Set(uuid),
-                                    followee_id: ActiveValue::Set(self.user_id),
-                                    created_at: ActiveValue::Set(now),
-                                    ..Default::default()
+                                let user_follower = user_follows::Model {
+                                    follower_id: uuid,
+                                    followee_id: self.user_id,
+                                    created_at: now,
                                 };
                                 self.event_bus.send_task(tx,UICommand::UserFollower(UserFollowerCommand::Create(user_follower)));
                                 ui.close();
@@ -168,11 +167,10 @@ impl Form for UserFavoritesTab {
                         match table_action {
                             TableAction::SelectItem(uuid,_label) => {
                                 let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
-                                let favorite = article_favorites::ActiveModel {
-                                    article_id: ActiveValue::Set(uuid),
-                                    user_id: ActiveValue::Set(self.user_id),
-                                    created_at: ActiveValue::Set(now),
-                                    ..Default::default()
+                                let favorite = article_favorites::Model {
+                                    article_id: uuid,
+                                    user_id: self.user_id,
+                                    created_at: now,
                                 };
                                 self.event_bus.send_task(tx,UICommand::ArticleFavorite(ArticleFavoriteCommand::Create(favorite)));
                                 ui.close();
