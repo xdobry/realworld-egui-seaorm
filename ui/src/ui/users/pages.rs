@@ -3,7 +3,7 @@ use std::any::Any;
 use core::api::{UICommand, UIResult};
 use core::users::api::{UserCommand, UserResult};
 use core::users::dto::UserUI;
-use crate::api::CommandBus;
+use command_bus::CommandBus;
 use crate::ui::users::forms::ui_user;
 use crate::ui::users::tables::show_users_table;
 use crate::ui::core::page::{Page, PageAction, UIBus};

@@ -1114,6 +1114,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "command-bus"
+version = "0.1.0"
+dependencies = [
+ "core",
+ "tokio",
+]
+
+[[package]]
 name = "concurrent-queue"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1804,6 +1812,7 @@ name = "fatclient"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "command-bus",
  "core",
  "eframe",
  "egui",
@@ -3977,14 +3986,21 @@ name = "quic-client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "clap",
+ "command-bus",
  "core",
  "directories-next",
+ "eframe",
+ "egui",
+ "egui_extras",
+ "models",
  "postcard",
  "quinn",
  "quinn-proto",
  "rcgen",
  "rustls",
+ "sea-orm",
  "serde",
  "tokio",
  "tracing",
@@ -3992,6 +4008,7 @@ dependencies = [
  "tracing-subscriber",
  "ui",
  "url",
+ "uuid",
 ]
 
 [[package]]
@@ -4000,6 +4017,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "command-bus",
  "core",
  "directories-next",
  "postcard",
@@ -4014,7 +4032,6 @@ dependencies = [
  "tracing",
  "tracing-futures",
  "tracing-subscriber",
- "ui",
 ]
 
 [[package]]
@@ -4801,11 +4818,11 @@ dependencies = [
 name = "server-core"
 version = "0.1.0"
 dependencies = [
+ "command-bus",
  "core",
  "models",
  "sea-orm",
  "tokio",
- "ui",
 ]
 
 [[package]]
@@ -5659,6 +5676,7 @@ name = "ui"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "command-bus",
  "core",
  "eframe",
  "egui",

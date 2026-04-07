@@ -1,0 +1,8 @@
+[package]
+name = "command-bus"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+core = { path = "../core" }
+tokio =  { version = "1.50.0", features=["full"] }

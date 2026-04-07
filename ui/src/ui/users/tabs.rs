@@ -11,7 +11,8 @@ use sea_orm::{ActiveValue, prelude::DateTimeWithTimeZone};
 use uuid::Uuid;
 use models::entity::article_favorites;
 
-use crate::{api::CommandBus, ui::{article_favorites::tables::show_user_favorites_table, articles::tables::show_articles_table, core::{page::{Form, PageAction, UIBus}, tables::{TableAction, TableMode}}, user_follows::tables::show_user_followers_table, users::tables::show_users_table}};
+use crate::{ui::{article_favorites::tables::show_user_favorites_table, articles::tables::show_articles_table, core::{page::{Form, PageAction, UIBus}, tables::{TableAction, TableMode}}, user_follows::tables::show_user_followers_table, users::tables::show_users_table}};
+use command_bus::CommandBus;
 
 #[derive(Default)]
 pub struct UserFollowersTab {

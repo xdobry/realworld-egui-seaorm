@@ -2,11 +2,13 @@ use egui::{Id, Modal};
 use sea_orm::{prelude::DateTimeWithTimeZone};
 use uuid::Uuid;
 
-use crate::{api::CommandBus, ui::{article_favorites::tables::show_article_favorites_table, 
+use crate::{ui::{article_favorites::tables::show_article_favorites_table, 
     article_tags::tables::show_article_tags_table, 
     comments::{forms::CommentForm, tables::show_comments_author_table}, 
     core::{page::{Form, PageAction, UIBus}, tables::{TableAction, TableMode}}, 
     tags::tables::show_tags_table, users::tables::show_users_table}};
+
+use command_bus::CommandBus;
 
 use models::entity::{article_favorites, article_tags, comments, tags, users};
 use core::comments::api::{CommentCommand, CommentResult};

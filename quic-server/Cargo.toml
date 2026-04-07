@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 app-core = { package="core", path="../core" }
 server-core = { path="../server-core" }
-ui = { path="../ui" }
+command-bus = { path="../command-bus" }
 quinn = "0.11.9"
 tokio = { version= "1.50.0", features = ["full"] }
 tracing = { version = "0.1.10", default-features = false, features = ["std"] }

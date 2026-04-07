@@ -7,7 +7,7 @@ use std::{
     net::SocketAddr,
     path::{self, Path, PathBuf},
     str,
-    sync::Arc,
+    sync::Arc, time::Duration,
 };
 
 mod common;
@@ -17,11 +17,11 @@ use app_core::api::{UICommand, UIResult};
 use clap::Parser;
 use proto::crypto::rustls::QuicServerConfig;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer, pem::PemObject};
-use sea_orm::Database;
+use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use tokio::sync::mpsc;
 use tracing::{error, info, info_span};
 use tracing_futures::Instrument as _;
-use ui::api::ResponseChannel;
+use command_bus::ResponseChannel;
 
 #[derive(Parser, Debug)]
 #[clap(name = "server")]
@@ -176,7 +176,19 @@ async fn handle_connection(conn: quinn::Incoming) -> Result<()> {
             .protocol
             .map_or_else(|| "<none>".into(), |x| String::from_utf8_lossy(&x).into_owned())
     );
+
+    let mut opt = ConnectOptions::new("postgres://realworld:realworld@localhost/realworld");
+        opt.max_connections(10)
+            .min_connections(2)
+            .connect_timeout(Duration::from_secs(10))
+            .idle_timeout(Duration::from_secs(300))
+            .sqlx_logging(true);
+
+    let db = Database::connect(opt).await?;
+    let db = Arc::new(db);
+
     async {
+        
         info!("established");
 
         // Each stream initiated by the client constitutes a new request.
@@ -192,7 +204,7 @@ async fn handle_connection(conn: quinn::Incoming) -> Result<()> {
                 }
                 Ok(s) => s,
             };
-            let fut = handle_messages(stream);
+            let fut = handle_messages(stream, db.clone());
             tokio::spawn(
                 async move {
                     if let Err(e) = fut.await {
@@ -209,20 +221,20 @@ async fn handle_connection(conn: quinn::Incoming) -> Result<()> {
 }
 
 async fn handle_messages(
-    (mut send, mut recv): (quinn::SendStream, quinn::RecvStream),
+    (mut send, mut recv): (quinn::SendStream, quinn::RecvStream), db: Arc<DatabaseConnection>
 ) -> Result<()> {
-    let db = Database::connect("postgres://realworld:realworld@localhost/realworld").await?;
-    loop {
-        let msg = read_message(&mut recv).await?;
-        let cmd: UICommand = postcard::from_bytes(&msg)?;
-        let (result_tx, mut result_rx) = mpsc::channel::<UIResult>(5);
-        let mut response_channel = ResponseChannel::new(result_tx);
-        server_core::handle_ui_command(cmd, &mut response_channel, &db).await?;
-        if let Some(result) = result_rx.recv().await {
-            let out_msg = postcard::to_stdvec(&result)?;
-            write_message(&mut send, &out_msg).await?;
-        }       
-    }
+    let msg = read_message(&mut recv).await?;
+    let cmd: UICommand = postcard::from_bytes(&msg)?;
+    // println!("got command {:?}",cmd);
+    let (result_tx, mut result_rx) = mpsc::channel::<UIResult>(1);
+    let mut response_channel = ResponseChannel::new(result_tx);
+    server_core::handle_ui_command(cmd, &mut response_channel, &db).await?;
+    if let Some(result) = result_rx.recv().await {
+        // println!("result {:?}", result);
+        let out_msg = postcard::to_stdvec(&result)?;
+        write_message(&mut send, &out_msg).await?;
+    }       
+    send.finish().unwrap();
     Ok(())
 }
 

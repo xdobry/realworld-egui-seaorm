@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 core = { path = "../core" }
 models = { path = "../models" }
+command-bus = { path = "../command-bus"}
 uuid = { version = "1.22.0", features = ["v4"] }
 eframe = "0.33.3"
 egui = "0.33.3"

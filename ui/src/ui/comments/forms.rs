@@ -1,8 +1,8 @@
 use egui::{Id, Modal};
-use tokio::sync::mpsc;
 
-use crate::{api::CommandBus, ui::{core::{page::{Form, PageAction, UIBus}, 
+use crate::{ui::{core::{page::{Form, PageAction, UIBus}, 
     tables::{TableAction, TableMode}}, users::tables::show_users_table}};
+use command_bus::CommandBus;    
 use models::entity::users;
 use core::users::api::{UserCommand, UserResult};
 use core::comments::dto::CommentAuthor;

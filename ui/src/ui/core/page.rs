@@ -3,7 +3,7 @@ use std::any::Any;
 
 use core::api::{UICommand, UIResult};
 
-use crate::api::{CommandBus, ResponseChannel, UITask};
+use command_bus::{CommandBus, ResponseChannel, UITask};
 
 pub trait Page: Any {
     fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus) -> PageAction;

@@ -3,25 +3,23 @@
 //! Checkout the `README.md` for guidance.
 
 use std::{
-    fs,
-    io::{self},
-    net::{SocketAddr, ToSocketAddrs},
-    path::PathBuf,
-    sync::Arc,
-    time::{Duration, Instant},
+    fs, io::{self}, net::{SocketAddr, ToSocketAddrs}, path::PathBuf, sync::Arc, thread, time::{Duration, Instant}
 };
 
 use anyhow::{Result, anyhow};
-use app_core::{api::{UICommand, UIResult}, users::api::{UserCommand, UserResult}};
+use app_core::{api::UIResult, dto::ChangeRecord};
 use clap::Parser;
+use command_bus::{CommandBus, UITask};
+use egui::{Context, ViewportBuilder};
 use proto::crypto::rustls::QuicClientConfig;
 use rustls::pki_types::CertificateDer;
+use tokio::{runtime::Runtime, sync::mpsc};
 use tracing::{error, info};
+use ui::app::FormsApp;
 use url::Url;
 
 mod common;
 
-/// HTTP/0.9 over QUIC client
 #[derive(Parser, Debug)]
 #[clap(name = "client")]
 struct Opt {
@@ -48,7 +46,7 @@ struct Opt {
     bind: SocketAddr,
 }
 
-fn main() {
+fn main() -> Result<(), eframe::Error> {
     tracing::subscriber::set_global_default(
         tracing_subscriber::FmtSubscriber::builder()
             .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
@@ -56,19 +54,39 @@ fn main() {
     )
     .unwrap();
     let opt = Opt::parse();
-    let code = {
-        if let Err(e) = run(opt) {
-            eprintln!("ERROR: {e}");
-            1
-        } else {
-            0
-        }
+        let options = eframe::NativeOptions {
+        viewport: ViewportBuilder::default(),
+        ..eframe::NativeOptions::default()
     };
-    ::std::process::exit(code);
+
+    let (command_tx, mut command_rx) = mpsc::channel::<UITask>(5);
+
+    eframe::run_native(
+        "RealWorld App - Egui Quic Client",
+        options,
+        Box::new(|cc| {
+            let egui_context = cc.egui_ctx.clone();
+            
+            thread::spawn(move || {
+                let rt = Runtime::new().unwrap();
+                rt.block_on(async move {
+                    // Example async task
+                    let r = run(opt, &mut command_rx, egui_context).await;
+                    if let Err(e) = r {
+                        println!("error {:?}",e);
+                    }
+                });
+            });
+
+            let command_bus = CommandBus::new(command_tx);
+
+            Ok(Box::new(FormsApp::new(cc.storage, command_bus)))
+        }),
+    )
+    
 }
 
-#[tokio::main]
-async fn run(options: Opt) -> Result<()> {
+async fn run(options: Opt, commands: &mut mpsc::Receiver<UITask>, egui_context: Context) -> Result<()> {
     let url = options.url;
     let url_host = strip_ipv6_brackets(url.host_str().unwrap());
     let remote = (url_host, url.port().unwrap_or(4433))
@@ -107,7 +125,6 @@ async fn run(options: Opt) -> Result<()> {
     let mut endpoint = quinn::Endpoint::client(options.bind)?;
     endpoint.set_default_client_config(client_config);
 
-    let start = Instant::now();
     let rebind = options.rebind;
     let host = options.host.as_deref().unwrap_or(url_host);
 
@@ -116,43 +133,30 @@ async fn run(options: Opt) -> Result<()> {
         .connect(remote, host)?
         .await
         .map_err(|e| anyhow!("failed to connect: {}", e))?;
-    eprintln!("connected at {:?}", start.elapsed());
-    let (mut send, mut recv) = conn
-        .open_bi()
-        .await
-        .map_err(|e| anyhow!("failed to open stream: {}", e))?;
-    if rebind {
-        let socket = std::net::UdpSocket::bind("[::]:0").unwrap();
-        let addr = socket.local_addr().unwrap();
-        eprintln!("rebinding to {addr}");
-        endpoint.rebind(socket).expect("rebind failed");
-    }
-
-    let ui_command = UICommand::User(UserCommand::Reload);
-    let out_msg = postcard::to_stdvec(&ui_command)?;
-    write_message(&mut send, &out_msg).await.map_err(|e| anyhow!("failed to send request: {}", e))?;
-    send.finish().unwrap();
-    
-    let response_start = Instant::now();
-    eprintln!("request sent at {:?}", response_start - start);
-    let msg = read_message(&mut recv)
-        .await
-        .map_err(|e| anyhow!("failed to read response: {}", e))?;
-    let duration = response_start.elapsed();
-    eprintln!(
-        "response received in {:?} - {} KiB/s",
-        duration,
-        msg.len() as f32 / (duration_secs(&duration) * 1024.0)
-    );
-    let response: UIResult = postcard::from_bytes(&msg)?;
-    match response {
-        UIResult::User(UserResult::Users(users)) => {
-            for user in users {
-                println!("user {:?}", user);
+    loop {
+        let task = commands.recv().await;
+        if let Some(mut task) = task {
+            let out_msg = postcard::to_stdvec(&task.command)?;
+            let (mut send, mut recv) = conn
+                .open_bi()
+                .await
+                .map_err(|e| anyhow!("failed to open stream: {}", e))?;
+            if rebind {
+                let socket = std::net::UdpSocket::bind("[::]:0").unwrap();
+                let addr = socket.local_addr().unwrap();
+                eprintln!("rebinding to {addr}");
+                endpoint.rebind(socket).expect("rebind failed");
             }
-        },
-        _ => {
-            println!("unknown response");
+            write_message(&mut send, &out_msg).await.map_err(|e| anyhow!("failed to send request: {}", e))?;
+            send.finish().unwrap();
+            let msg = read_message(&mut recv)
+                .await
+                .map_err(|e| anyhow!("failed to read response: {}", e))?;
+            let response: UIResult = postcard::from_bytes(&msg)?;
+            task.response.send(response);
+            egui_context.request_repaint();
+        } else {
+            break;
         }
     }
     conn.close(0u32.into(), b"done");
@@ -213,6 +217,35 @@ pub async fn read_message(
     Ok(buffer)
 }
 
-fn duration_secs(x: &Duration) -> f32 {
-    x.as_secs() as f32 + x.subsec_nanos() as f32 * 1e-9
+
+#[cfg(test)]
+mod tests {
+    use app_core::dto::ChangeRecord;
+    use uuid::Uuid;
+     use sea_orm::prelude::DateTimeWithTimeZone;
+
+    #[test]
+    fn test_serialization() {
+        use models::entity::articles;
+        
+        let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(chrono::Local::now().offset());
+        let a1 = articles::Model {
+            id: Uuid::new_v4(),
+            slug: "slug".into(),
+            title: "tilte".into(),
+            description: "description".into(),
+            body: "body".into(),
+            author_id: Uuid::new_v4(),
+            created_at: now,
+            updated_at: now,
+        };
+        let mut a2 = a1.clone();
+        a2.title = "title2".into();
+        a2.slug = "s1".into();
+        let change_record = ChangeRecord::from_models::<articles::Entity>(&a2, &a1);
+        assert_eq!(2, change_record.changes.len());
+        let out_msg = postcard::to_stdvec(&change_record).unwrap();
+        let cr2: ChangeRecord = postcard::from_bytes(&out_msg).unwrap();
+        assert_eq!(2, cr2.changes.len())
+    }
 }

@@ -13,7 +13,7 @@ use core::tags::api::{TagCommand, TagResult};
 use core::users::api::{UserCommand, UserResult};
 use models::entity::{article_favorites, articles, tags, comments, article_tags, user_follows, users};
 use sea_orm::{InsertResult, JoinType, prelude::*};
-use ui::api::ResponseChannel;
+use command_bus::ResponseChannel;
 
 struct DBApi<'a> {
     db: &'a DatabaseConnection

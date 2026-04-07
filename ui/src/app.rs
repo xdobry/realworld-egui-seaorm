@@ -1,7 +1,8 @@
 use eframe::Storage;
 use sea_orm::{prelude::{DateTimeWithTimeZone, Uuid}};
+use command_bus::CommandBus;
 use crate::{ 
-    api::CommandBus, ui::{articles::pages::{ArticleNew, ArticleTable}, 
+    ui::{articles::pages::{ArticleNew, ArticleTable}, 
     core::page::{DbError, Page, PageAction}, 
     tags::pages::{TagNew, TagTable}, users::pages::{UserNew, UserTable}}};
 use core::articles::dto::ArticleUI;
@@ -34,8 +35,7 @@ impl FormsApp {
 
 
 impl FormsApp {
-    pub fn new(_storage: Option<&dyn Storage>, _args: Vec<String>, 
-        command_tx: CommandBus) -> Self {
+    pub fn new(_storage: Option<&dyn Storage>, command_tx: CommandBus) -> Self {
         Self {
             number: 0,
             command_tx,

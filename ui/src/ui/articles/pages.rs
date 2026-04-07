@@ -4,7 +4,7 @@ use models::entity::{articles};
 use core::api::{UICommand, UIResult};
 use core::articles::api::{ArticleCommand, ArticleResult};
 use core::articles::dto::{ArticleUI};
-use crate::api::CommandBus;
+use command_bus::CommandBus;
 use crate::ui::articles::forms::ArticleForm;
 use crate::ui::articles::tables::{show_articles_table};
 use crate::ui::articles::tabs::{ArticleCommentsTab, ArticleFavoriteTab, ArticleTagsTab};

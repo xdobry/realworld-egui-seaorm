@@ -16,7 +16,6 @@ pub struct FieldValue {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
 pub enum DbValue {
     String(String),
     TimeDateTimeWithTimeZone(OffsetDateTime),
