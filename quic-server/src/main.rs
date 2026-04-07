@@ -13,11 +13,15 @@ use std::{
 mod common;
 
 use anyhow::{Context, Result, anyhow, bail};
+use app_core::api::{UICommand, UIResult};
 use clap::Parser;
 use proto::crypto::rustls::QuicServerConfig;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer, pem::PemObject};
+use sea_orm::Database;
+use tokio::sync::mpsc;
 use tracing::{error, info, info_span};
 use tracing_futures::Instrument as _;
+use ui::api::ResponseChannel;
 
 #[derive(Parser, Debug)]
 #[clap(name = "server")]
@@ -25,8 +29,6 @@ struct Opt {
     /// file to log TLS keys to for debugging
     #[clap(long = "keylog")]
     keylog: bool,
-    /// directory to serve files from
-    root: PathBuf,
     /// TLS private key in PEM format
     #[clap(short = 'k', long = "key", requires = "cert")]
     key: Option<PathBuf>,
@@ -132,11 +134,6 @@ async fn run(options: Opt) -> Result<()> {
     let transport_config = Arc::get_mut(&mut server_config.transport).unwrap();
     transport_config.max_concurrent_uni_streams(0_u8.into());
 
-    let root = Arc::<Path>::from(options.root.clone());
-    if !root.exists() {
-        bail!("root path does not exist");
-    }
-
     let endpoint = quinn::Endpoint::server(server_config, options.listen)?;
     eprintln!("listening on {}", endpoint.local_addr()?);
 
@@ -155,7 +152,7 @@ async fn run(options: Opt) -> Result<()> {
             conn.retry().unwrap();
         } else {
             info!("accepting connection");
-            let fut = handle_connection(root.clone(), conn);
+            let fut = handle_connection(conn);
             tokio::spawn(async move {
                 if let Err(e) = fut.await {
                     error!("connection failed: {reason}", reason = e.to_string())
@@ -167,7 +164,7 @@ async fn run(options: Opt) -> Result<()> {
     Ok(())
 }
 
-async fn handle_connection(root: Arc<Path>, conn: quinn::Incoming) -> Result<()> {
+async fn handle_connection(conn: quinn::Incoming) -> Result<()> {
     let connection = conn.await?;
     let span = info_span!(
         "connection",
@@ -195,7 +192,7 @@ async fn handle_connection(root: Arc<Path>, conn: quinn::Incoming) -> Result<()>
                 }
                 Ok(s) => s,
             };
-            let fut = handle_request(root.clone(), stream);
+            let fut = handle_messages(stream);
             tokio::spawn(
                 async move {
                     if let Err(e) = fut.await {
@@ -211,64 +208,61 @@ async fn handle_connection(root: Arc<Path>, conn: quinn::Incoming) -> Result<()>
     Ok(())
 }
 
-async fn handle_request(
-    root: Arc<Path>,
+async fn handle_messages(
     (mut send, mut recv): (quinn::SendStream, quinn::RecvStream),
 ) -> Result<()> {
-    let req = recv
-        .read_to_end(64 * 1024)
-        .await
-        .map_err(|e| anyhow!("failed reading request: {}", e))?;
-    let mut escaped = String::new();
-    for &x in &req[..] {
-        let part = ascii::escape_default(x).collect::<Vec<_>>();
-        escaped.push_str(str::from_utf8(&part).unwrap());
+    let db = Database::connect("postgres://realworld:realworld@localhost/realworld").await?;
+    loop {
+        let msg = read_message(&mut recv).await?;
+        let cmd: UICommand = postcard::from_bytes(&msg)?;
+        let (result_tx, mut result_rx) = mpsc::channel::<UIResult>(5);
+        let mut response_channel = ResponseChannel::new(result_tx);
+        server_core::handle_ui_command(cmd, &mut response_channel, &db).await?;
+        if let Some(result) = result_rx.recv().await {
+            let out_msg = postcard::to_stdvec(&result)?;
+            write_message(&mut send, &out_msg).await?;
+        }       
     }
-    info!(content = %escaped);
-    // Execute the request
-    let resp = process_get(&root, &req).unwrap_or_else(|e| {
-        error!("failed: {}", e);
-        format!("failed to process request: {e}\n").into_bytes()
-    });
-    // Write the response
-    send.write_all(&resp)
-        .await
-        .map_err(|e| anyhow!("failed to send response: {}", e))?;
-    // Gracefully terminate the stream
-    send.finish().unwrap();
-    info!("complete");
     Ok(())
 }
 
-fn process_get(root: &Path, x: &[u8]) -> Result<Vec<u8>> {
-    if x.len() < 4 || &x[0..4] != b"GET " {
-        bail!("missing GET");
+pub async fn write_message(
+    stream: &mut quinn::SendStream,
+    payload: &[u8],
+) -> io::Result<()> {
+    let len = payload.len() as u32;
+
+    // Convert length to big-endian bytes
+    let len_bytes = len.to_be_bytes();
+
+    // Write length prefix
+    stream.write_all(&len_bytes).await?;
+
+    // Write payload
+    stream.write_all(payload).await?;
+
+    Ok(())
+}
+
+pub async fn read_message(
+    stream: &mut quinn::RecvStream,
+) -> Result<Vec<u8>> {
+    // Read exactly 4 bytes for length
+    let mut len_bytes = [0u8; 4];
+    stream.read_exact(&mut len_bytes).await?;
+
+    let len = u32::from_be_bytes(len_bytes) as usize;
+    const MAX_SIZE: usize = 10 * 1024 * 1024; // 10 MB
+
+    if len > MAX_SIZE {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "message too large").into());
     }
-    if x[4..].len() < 2 || &x[x.len() - 2..] != b"\r\n" {
-        bail!("missing \\r\\n");
-    }
-    let x = &x[4..x.len() - 2];
-    let end = x.iter().position(|&c| c == b' ').unwrap_or(x.len());
-    let path = str::from_utf8(&x[..end]).context("path is malformed UTF-8")?;
-    let path = Path::new(&path);
-    let mut real_path = PathBuf::from(root);
-    let mut components = path.components();
-    match components.next() {
-        Some(path::Component::RootDir) => {}
-        _ => {
-            bail!("path must be absolute");
-        }
-    }
-    for c in components {
-        match c {
-            path::Component::Normal(x) => {
-                real_path.push(x);
-            }
-            x => {
-                bail!("illegal component in path: {:?}", x);
-            }
-        }
-    }
-    let data = fs::read(&real_path).context("failed reading file")?;
-    Ok(data)
+
+    // Allocate buffer for payload
+    let mut buffer = vec![0u8; len];
+
+    // Read payload
+    stream.read_exact(&mut buffer).await?;
+
+    Ok(buffer)
 }

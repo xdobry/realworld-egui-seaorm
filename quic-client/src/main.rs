@@ -4,7 +4,7 @@
 
 use std::{
     fs,
-    io::{self, Write},
+    io::{self},
     net::{SocketAddr, ToSocketAddrs},
     path::PathBuf,
     sync::Arc,
@@ -12,6 +12,7 @@ use std::{
 };
 
 use anyhow::{Result, anyhow};
+use app_core::{api::{UICommand, UIResult}, users::api::{UserCommand, UserResult}};
 use clap::Parser;
 use proto::crypto::rustls::QuicClientConfig;
 use rustls::pki_types::CertificateDer;
@@ -106,7 +107,6 @@ async fn run(options: Opt) -> Result<()> {
     let mut endpoint = quinn::Endpoint::client(options.bind)?;
     endpoint.set_default_client_config(client_config);
 
-    let request = format!("GET {}\r\n", url.path());
     let start = Instant::now();
     let rebind = options.rebind;
     let host = options.host.as_deref().unwrap_or(url_host);
@@ -128,26 +128,34 @@ async fn run(options: Opt) -> Result<()> {
         endpoint.rebind(socket).expect("rebind failed");
     }
 
-    send.write_all(request.as_bytes())
-        .await
-        .map_err(|e| anyhow!("failed to send request: {}", e))?;
+    let ui_command = UICommand::User(UserCommand::Reload);
+    let out_msg = postcard::to_stdvec(&ui_command)?;
+    write_message(&mut send, &out_msg).await.map_err(|e| anyhow!("failed to send request: {}", e))?;
     send.finish().unwrap();
+    
     let response_start = Instant::now();
     eprintln!("request sent at {:?}", response_start - start);
-    let resp = recv
-        .read_to_end(usize::MAX)
+    let msg = read_message(&mut recv)
         .await
         .map_err(|e| anyhow!("failed to read response: {}", e))?;
     let duration = response_start.elapsed();
     eprintln!(
         "response received in {:?} - {} KiB/s",
         duration,
-        resp.len() as f32 / (duration_secs(&duration) * 1024.0)
+        msg.len() as f32 / (duration_secs(&duration) * 1024.0)
     );
-    io::stdout().write_all(&resp).unwrap();
-    io::stdout().flush().unwrap();
+    let response: UIResult = postcard::from_bytes(&msg)?;
+    match response {
+        UIResult::User(UserResult::Users(users)) => {
+            for user in users {
+                println!("user {:?}", user);
+            }
+        },
+        _ => {
+            println!("unknown response");
+        }
+    }
     conn.close(0u32.into(), b"done");
-
     // Give the server a fair chance to receive the close packet
     endpoint.wait_idle().await;
 
@@ -162,6 +170,47 @@ fn strip_ipv6_brackets(host: &str) -> &str {
     } else {
         host
     }
+}
+
+pub async fn write_message(
+    stream: &mut quinn::SendStream,
+    payload: &[u8],
+) -> io::Result<()> {
+    let len = payload.len() as u32;
+
+    // Convert length to big-endian bytes
+    let len_bytes = len.to_be_bytes();
+
+    // Write length prefix
+    stream.write_all(&len_bytes).await?;
+
+    // Write payload
+    stream.write_all(payload).await?;
+
+    Ok(())
+}
+
+pub async fn read_message(
+    stream: &mut quinn::RecvStream,
+) -> Result<Vec<u8>> {
+    // Read exactly 4 bytes for length
+    let mut len_bytes = [0u8; 4];
+    stream.read_exact(&mut len_bytes).await?;
+
+    let len = u32::from_be_bytes(len_bytes) as usize;
+    const MAX_SIZE: usize = 10 * 1024 * 1024; // 10 MB
+
+    if len > MAX_SIZE {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "message too large").into());
+    }
+
+    // Allocate buffer for payload
+    let mut buffer = vec![0u8; len];
+
+    // Read payload
+    stream.read_exact(&mut buffer).await?;
+
+    Ok(buffer)
 }
 
 fn duration_secs(x: &Duration) -> f32 {
