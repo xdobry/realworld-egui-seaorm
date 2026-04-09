@@ -1,14 +1,13 @@
 use egui::{Id, Modal};
-use sea_orm::{prelude::DateTimeWithTimeZone};
-use uuid::Uuid;
+use models::Uuid;
 
 use crate::{ui::{article_favorites::tables::show_article_favorites_table, 
     article_tags::tables::show_article_tags_table, 
     comments::{forms::CommentForm, tables::show_comments_author_table}, 
-    core::{page::{Form, PageAction, UIBus}, tables::{TableAction, TableMode}}, 
+    core::{page::{Form, PageAction}, tables::{TableAction, TableMode}}, 
     tags::tables::show_tags_table, users::tables::show_users_table}};
 
-use command_bus::CommandBus;
+use command_bus::{CommandBus, UIBus};
 
 use models::entity::{article_favorites, article_tags, comments, tags, users};
 use core::comments::api::{CommentCommand, CommentResult};
@@ -60,7 +59,7 @@ impl Form for ArticleTagsTab {
                         let table_action = show_tags_table(ui,tags, TableMode::Select);
                         match table_action {
                             TableAction::SelectItem(uuid,_label) => {
-                                let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
+                                let now = core::time_now();
                                 let article_tag = article_tags::Model {
                                     tag_id: uuid,
                                     article_id: self.article_id,
@@ -174,7 +173,7 @@ impl Form for ArticleFavoriteTab {
                         let table_action = show_users_table(ui,users, TableMode::Select);
                         match table_action {
                             TableAction::SelectItem(uuid,_label) => {
-                                let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
+                                let now = core::time_now();
                                 let article_tag = article_favorites::Model {
                                     user_id: uuid,
                                     article_id: self.article_id,
@@ -264,9 +263,9 @@ impl Form for ArticleCommentsTab {
         }
         if let Some(article_comments) = &self.article_comments {
             if ui.button("Add Comment").clicked() {
-                let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
+                let now = core::time_now();
                 let comment_author = CommentAuthor {
-                    id: Uuid::new_v4(),
+                    id: core::new_uuid(),
                     body: "".to_string(),
                     article_id: self.article_id,
                     author_id: Uuid::nil(),

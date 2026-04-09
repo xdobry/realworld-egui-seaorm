@@ -1,6 +1,6 @@
 use egui::Sense;
 use egui_extras::{Column, TableBuilder};
-use uuid::Uuid;
+use models::Uuid;
 
 use crate::{ui::{core::tables::{TableAction, TableMode}, utils::strong_unselectable}};
 use models::entity::tags;

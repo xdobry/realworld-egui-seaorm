@@ -3,17 +3,16 @@ use std::any::Any;
 use core::api::{UICommand, UIResult};
 use core::users::api::{UserCommand, UserResult};
 use core::users::dto::UserUI;
-use command_bus::CommandBus;
+use command_bus::{CommandBus, UIBus};
 use crate::ui::users::forms::ui_user;
 use crate::ui::users::tables::show_users_table;
-use crate::ui::core::page::{Page, PageAction, UIBus};
+use crate::ui::core::page::{Page, PageAction};
 use crate::ui::core::tables::{TableAction, TableMode};
 use crate::ui::users::tabs::{UserFavoritesTab, UserFollowersTab};
 use crate::ui::core::page::Form;
 
 use models::entity::users;
-use sea_orm::prelude::DateTimeWithTimeZone;
-use uuid::Uuid;
+use models::{DateTimeWithTimeZone, Uuid};
 
 pub struct UserTable {
     users: Vec<users::Model>,
@@ -28,7 +27,7 @@ impl Page for UserTable {
                 self.event_bus.send_task(tx, UICommand::User(UserCommand::Reload));
             }
             if ui.button("Create User").clicked() {
-                let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
+                let now = core::time_now();
                 let new_user = UserUI {
                     id: Uuid::new_v4(),
                     created_at: now,

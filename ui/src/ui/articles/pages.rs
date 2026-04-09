@@ -4,11 +4,11 @@ use models::entity::{articles};
 use core::api::{UICommand, UIResult};
 use core::articles::api::{ArticleCommand, ArticleResult};
 use core::articles::dto::{ArticleUI};
-use command_bus::CommandBus;
+use command_bus::{CommandBus, UIBus};
 use crate::ui::articles::forms::ArticleForm;
 use crate::ui::articles::tables::{show_articles_table};
 use crate::ui::articles::tabs::{ArticleCommentsTab, ArticleFavoriteTab, ArticleTagsTab};
-use crate::ui::core::page::{Form, Page, PageAction, UIBus};
+use crate::ui::core::page::{Form, Page, PageAction};
 use crate::ui::core::tables::{TableAction, TableMode};
 
 pub struct ArticleTable {

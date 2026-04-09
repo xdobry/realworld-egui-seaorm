@@ -1,5 +1,5 @@
 use eframe::Storage;
-use sea_orm::{prelude::{DateTimeWithTimeZone, Uuid}};
+use models::Uuid;
 use command_bus::CommandBus;
 use crate::{ 
     ui::{articles::pages::{ArticleNew, ArticleTable}, 
@@ -48,9 +48,7 @@ impl FormsApp {
 
 impl FormsApp {
     pub fn add_page<T: Page>(&mut self, mut page: T) {
-        println!("add page");
         page.init(&mut self.command_tx);
-        println!("page initialized");
         self.pages.push(Box::new(page));
         self.selected_page = Some(self.pages.len()-1);
     }
@@ -58,6 +56,7 @@ impl FormsApp {
 
 impl eframe::App for FormsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.command_tx.update();
         egui::SidePanel::left("left_panel")
             .exact_width(100.0)
             .show(ctx, |ui| {
@@ -82,7 +81,7 @@ impl eframe::App for FormsApp {
                     }                  
                     if resp.clicked_by(egui::PointerButton::Secondary) {
                         if !self.swith_to_page::<UserNew>() {
-                            let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
+                            let now = core::time_now();
                             self.add_page(UserNew::new(UserUI {
                                 id: Uuid::new_v4(),
                                 created_at: now,
@@ -99,9 +98,9 @@ impl eframe::App for FormsApp {
                     }                  
                     if resp.clicked_by(egui::PointerButton::Secondary) {
                         if !self.swith_to_page::<TagNew>() {
-                            let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
+                            let now = core::time_now();
                             self.add_page(TagNew::new(TagUI {
-                                id: Uuid::new_v4(),
+                                id: core::new_uuid(),
                                 created_at: now,
                                 ..Default::default()
                             }));

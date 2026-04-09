@@ -3,11 +3,11 @@
 //! Checkout the `README.md` for guidance.
 
 use std::{
-    fs, io::{self}, net::{SocketAddr, ToSocketAddrs}, path::PathBuf, sync::Arc, thread, time::{Duration, Instant}
+    fs, io::{self}, net::{SocketAddr, ToSocketAddrs}, path::PathBuf, sync::Arc, thread
 };
 
 use anyhow::{Result, anyhow};
-use app_core::{api::UIResult, dto::ChangeRecord};
+use app_core::{api::UIResult};
 use clap::Parser;
 use command_bus::{CommandBus, UITask};
 use egui::{Context, ViewportBuilder};

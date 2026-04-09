@@ -7,12 +7,11 @@ use core::{api::{UICommand, UIResult},
 use egui::{Id, Modal};
 use models::entity::{articles, users};
 use models::entity::user_follows;
-use sea_orm::{ActiveValue, prelude::DateTimeWithTimeZone};
-use uuid::Uuid;
+use models::{DateTimeWithTimeZone, Uuid};
 use models::entity::article_favorites;
 
-use crate::{ui::{article_favorites::tables::show_user_favorites_table, articles::tables::show_articles_table, core::{page::{Form, PageAction, UIBus}, tables::{TableAction, TableMode}}, user_follows::tables::show_user_followers_table, users::tables::show_users_table}};
-use command_bus::CommandBus;
+use crate::{ui::{article_favorites::tables::show_user_favorites_table, articles::tables::show_articles_table, core::{page::{Form, PageAction}, tables::{TableAction, TableMode}}, user_follows::tables::show_user_followers_table, users::tables::show_users_table}};
+use command_bus::{CommandBus, UIBus};
 
 #[derive(Default)]
 pub struct UserFollowersTab {
@@ -53,11 +52,10 @@ impl Form for UserFollowersTab {
                         let table_action = show_users_table(ui,users, TableMode::Select);
                         match table_action {
                             TableAction::SelectItem(uuid,_label) => {
-                                let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
                                 let user_follower = user_follows::Model {
                                     follower_id: uuid,
                                     followee_id: self.user_id,
-                                    created_at: now,
+                                    created_at: core::time_now(),
                                 };
                                 self.event_bus.send_task(tx,UICommand::UserFollower(UserFollowerCommand::Create(user_follower)));
                                 ui.close();
@@ -167,7 +165,7 @@ impl Form for UserFavoritesTab {
                         let table_action = show_articles_table(ui,articles, TableMode::Select);
                         match table_action {
                             TableAction::SelectItem(uuid,_label) => {
-                                let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
+                                let now = core::time_now();
                                 let favorite = article_favorites::Model {
                                     article_id: uuid,
                                     user_id: self.user_id,

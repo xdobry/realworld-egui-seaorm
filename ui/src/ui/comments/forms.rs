@@ -1,8 +1,8 @@
 use egui::{Id, Modal};
 
-use crate::{ui::{core::{page::{Form, PageAction, UIBus}, 
+use crate::{ui::{core::{page::{Form, PageAction}, 
     tables::{TableAction, TableMode}}, users::tables::show_users_table}};
-use command_bus::CommandBus;    
+use command_bus::{CommandBus, UIBus};    
 use models::entity::users;
 use core::users::api::{UserCommand, UserResult};
 use core::comments::dto::CommentAuthor;
