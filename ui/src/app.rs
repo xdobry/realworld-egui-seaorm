@@ -1,5 +1,6 @@
 use eframe::Storage;
-use sea_orm::{prelude::{DateTimeWithTimeZone, Uuid}};
+use egui::{Align, Layout, global_theme_preference_switch};
+use models::Uuid;
 use command_bus::CommandBus;
 use crate::{ 
     ui::{articles::pages::{ArticleNew, ArticleTable}, 
@@ -17,6 +18,7 @@ pub struct FormsApp {
     pub selected_page: Option<usize>,
     pub pages: Vec<Box<dyn Page>>,
     pub pending_actions: usize,
+    pub about_window: bool,
 }
 
 
@@ -42,15 +44,14 @@ impl FormsApp {
             pages: Vec::new(),
             selected_page: None,
             pending_actions: 0,
+            about_window: false,
         }
     }
 }
 
 impl FormsApp {
     pub fn add_page<T: Page>(&mut self, mut page: T) {
-        println!("add page");
         page.init(&mut self.command_tx);
-        println!("page initialized");
         self.pages.push(Box::new(page));
         self.selected_page = Some(self.pages.len()-1);
     }
@@ -58,10 +59,16 @@ impl FormsApp {
 
 impl eframe::App for FormsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.command_tx.update();
         egui::SidePanel::left("left_panel")
             .exact_width(100.0)
             .show(ctx, |ui| {
-                ui.strong("Navigation");
+                ui.horizontal(|ui| {
+                    if ui.button("Help").clicked() {
+                        self.about_window = true;
+                    }
+                    global_theme_preference_switch(ui);
+                });
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     let resp = ui.button("Articles");
                     if resp.clicked() {
@@ -82,7 +89,7 @@ impl eframe::App for FormsApp {
                     }                  
                     if resp.clicked_by(egui::PointerButton::Secondary) {
                         if !self.swith_to_page::<UserNew>() {
-                            let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
+                            let now = core::time_now();
                             self.add_page(UserNew::new(UserUI {
                                 id: Uuid::new_v4(),
                                 created_at: now,
@@ -99,9 +106,9 @@ impl eframe::App for FormsApp {
                     }                  
                     if resp.clicked_by(egui::PointerButton::Secondary) {
                         if !self.swith_to_page::<TagNew>() {
-                            let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
+                            let now = core::time_now();
                             self.add_page(TagNew::new(TagUI {
-                                id: Uuid::new_v4(),
+                                id: core::new_uuid(),
                                 created_at: now,
                                 ..Default::default()
                             }));
@@ -161,6 +168,28 @@ impl eframe::App for FormsApp {
                     }
                 }
 
+            }
+            if self.about_window {
+                egui::Window::new("About")
+                    .collapsible(false)
+                    .resizable(false)
+                    .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]) // Center the modal
+                    .show(ctx, |ui| {
+                        ui.with_layout(Layout::top_down(Align::Center), |ui| {
+                            ui.heading("RealWorld Demo");
+                            ui.spacing();
+                            ui.label("Realworld example app implemented in Rust using egui and SeaORM.");
+                            ui.label("MIT License");
+                            ui.spacing();
+                            ui.hyperlink_to("GitHub Site", "https://github.com/xdobry/realworld-egui-seaorm");
+                            ui.label("Author: Artur T. <mail@xdobry.de>");
+                        });
+                        ui.spacing();
+                        if ui.button("Cancel").clicked() {
+                            self.about_window = false;
+                        }
+                    });
+                ui.disable();
             }
         });
         if self.pending_actions>0 {

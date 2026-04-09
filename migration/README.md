@@ -1,3 +1,7 @@
+# DB Setup
+
+This program is sea orm typical way to create all needed tables for the programm
+
 # Running Migrator CLI
 
 - Generate a new migration file
@@ -42,5 +46,12 @@
 
 ## Setup postgres db
 
+Start psql and create user and database
+
+    psql -U postgres
+
     CREATE ROLE realworld WITH LOGIN PASSWORD 'realworld';
     CREATE DATABASE realworld OWNER realworld;
+
+The db connection string is stored in .env file you may adapt this file
+or set DATABASE_URL env variable

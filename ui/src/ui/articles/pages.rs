@@ -4,11 +4,11 @@ use models::entity::{articles};
 use core::api::{UICommand, UIResult};
 use core::articles::api::{ArticleCommand, ArticleResult};
 use core::articles::dto::{ArticleUI};
-use command_bus::CommandBus;
+use command_bus::{CommandBus, UIBus};
 use crate::ui::articles::forms::ArticleForm;
 use crate::ui::articles::tables::{show_articles_table};
 use crate::ui::articles::tabs::{ArticleCommentsTab, ArticleFavoriteTab, ArticleTagsTab};
-use crate::ui::core::page::{Form, Page, PageAction, UIBus};
+use crate::ui::core::page::{Form, Page, PageAction};
 use crate::ui::core::tables::{TableAction, TableMode};
 
 pub struct ArticleTable {
@@ -151,19 +151,21 @@ impl Page for ArticleNew {
     fn as_any(&self) -> &dyn Any {
         self
     }
-    fn update(&mut self, _tx: &mut CommandBus,emit: &mut dyn FnMut(PageAction)) {
+    fn update(&mut self, tx: &mut CommandBus,emit: &mut dyn FnMut(PageAction)) {
         if let Ok(msg) = self.event_bus.try_recv() {
             match msg {
                 UIResult::Created => {
                     self.page_state = PageState::Final;
                 },
                 UIResult::DbError(msg) => {
+                    self.page_state = PageState::Initial;
                     emit(PageAction::AddError(msg));
                 },
                  _ => {
                 }
             }
         }
+        self.article_form.update(tx, &mut *emit);
     }
 }
 

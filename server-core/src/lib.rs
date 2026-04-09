@@ -156,7 +156,7 @@ pub async fn handle_ui_command(cmd: UICommand, result_tx: &mut ResponseChannel, 
                         .column(article_favorites::Column::ArticleId)
                         .column(article_favorites::Column::CreatedAt)
                         .column_as(articles::Column::Title, "article_title")
-                        .join(JoinType::LeftJoin, article_favorites::Relation::Users.def())
+                        .join(JoinType::LeftJoin, article_favorites::Relation::Articles.def())
                         .into_model::<UserFavoriteUI>()
                         .all(db)
                         .await?;

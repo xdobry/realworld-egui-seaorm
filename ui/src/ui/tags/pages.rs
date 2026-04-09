@@ -1,18 +1,14 @@
 use std::any::Any;
 
-use sea_orm::prelude::DateTimeWithTimeZone;
-use tokio::sync::mpsc;
-
 use models::entity::tags;
-use uuid::Uuid;
 use core::api::{UICommand, UIResult};
 use core::tags::api::{TagCommand, TagResult};
 use core::tags::dto::TagUI;
 use crate::ui::tags::forms::ui_tag;
 use crate::ui::tags::tables::show_tags_table;
-use crate::ui::core::page::{Page, PageAction, UIBus};
+use crate::ui::core::page::{Page, PageAction};
 use crate::ui::core::tables::{TableAction, TableMode};
-use command_bus::{CommandBus};
+use command_bus::{CommandBus, UIBus};
 
 pub struct TagTable {
     tags: Vec<tags::Model>,
@@ -27,10 +23,9 @@ impl Page for TagTable {
                 self.event_bus.send_task(tx, UICommand::Tag(TagCommand::Reload));
             }
             if ui.button("Create Tag").clicked() {
-                let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
                 let tag_ui = TagUI {
-                    id: Uuid::new_v4(),
-                    created_at: now,
+                    id: core::new_uuid(),
+                    created_at: core::time_now(),
                     ..Default::default()
                 };
                 page_action = PageAction::AddPage(Box::new(TagNew::new(tag_ui)));

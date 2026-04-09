@@ -2,11 +2,11 @@
 use egui::{Id, Modal};
 
 use crate::{ui::{ 
-    core::{page::{Form, PageAction, UIBus}, 
+    core::{page::{Form, PageAction}, 
     tables::{TableAction, TableMode}}, 
     users::tables::show_users_table
 }};
-use command_bus::CommandBus;
+use command_bus::{CommandBus, UIBus};
 use models::entity::users;
 use core::articles::dto::ArticleUI;
 use core::users::api::{UserCommand, UserResult};

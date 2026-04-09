@@ -1,9 +1,7 @@
-use tokio::sync::mpsc::{self, error::TryRecvError};
+
 use std::any::Any;
 
-use core::api::{UICommand, UIResult};
-
-use command_bus::{CommandBus, ResponseChannel, UITask};
+use command_bus::CommandBus;
 
 pub trait Page: Any {
     fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus) -> PageAction;
@@ -20,26 +18,7 @@ pub trait Page: Any {
     }
 }
 
-pub struct UIBus {
-    result_rx: mpsc::Receiver<UIResult>,
-    result_tx: mpsc::Sender<UIResult>,
-}
 
-impl UIBus {
-    pub fn send_task(&self, command_bus: &mut CommandBus, ui_command: UICommand) {
-        command_bus.dispatch(UITask::new(ui_command, ResponseChannel::new(self.result_tx.clone())));
-    }
-    pub fn try_recv(&mut self) -> Result<UIResult, TryRecvError> {
-        self.result_rx.try_recv()
-    }
-}
-
-impl Default for UIBus {
-    fn default() -> Self {
-        let (result_tx, result_rx) = mpsc::channel::<UIResult>(5);
-        Self { result_rx, result_tx }
-    }
-}
 
 
 pub struct DbError {

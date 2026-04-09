@@ -9,10 +9,8 @@ core = { path="../core" }
 ui = { path="../ui" }
 command-bus = { path="../command-bus" }
 models = { path="../models" }
-uuid = { version = "1.22.0", features = ["v4"] }
 eframe = "0.33.3"
 egui = "0.33.3"
 egui_extras = "0.33.3"
-sea-orm = { version = "2.0.0-rc", features = [ "sqlx-postgres", "runtime-tokio-native-tls", "macros" ] }
 tokio =  { version = "1.50.0", features=["full"] }
-chrono = "0.4.44"
+sea-orm = { version = "2.0.0-rc", features = [ "sqlx-postgres", "runtime-tokio-native-tls", "macros" ] }
