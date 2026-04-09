@@ -153,5 +153,21 @@ It serves the frontend directly from web_client/dist folder (this can be set by 
 
 # Conclusions
 
+# My conclusions aber using rust as programmin language
+
+Rust is powerfull low code system language.
+Programming typicall applications with crates like sea orm, serde, axum and egui are more or less same easy as using java or python.
+The rust abstraction are powerfull enough to write also "business" applications with similar efficieny like Java, C#, Typescript or Python.
+Rust enum and match are very powerfull to write readable code.
+Rust compiler can be your best friend because it support you to write valid typesafe code.
+
+# egui
+
+Egui was primary developed in gaming area.
+The are not build in options for programmin powerfull data grid.
+It is very pleasent for user because it is fast.
+Probably egui should not be used to get html/css or some special corporate design.
+Programming own special egui elements are quite easy because of immediate mode.
+
 # Outlook
 
