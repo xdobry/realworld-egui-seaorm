@@ -39,6 +39,18 @@ I noticed to use rust effectively I should not copy the patterns I know from Jav
 
 It is very refreshing to compile program to small executable and do not need huge runtime and tons of dependencies.
 
+## Concreate solved challanges
+
+* egui runs one thread. The interaction with db requires async function calls that are directly not possible in egui code.
+  To separate it messages like (load user, create uses) are send to async able worker via message bus (based on msp).
+  This lead to somekind to ELM-Architecture where UI communicates to backend via async messages
+* ui in desktop use tokio for async communication with db or quic server the wasm ui can not use tokio but use poll-promise the is abstraction as command bus that
+  implement this for desktop and wasm variant differently
+* messages are serialized to compact binary using postcard serde library. The web server has only one endpoint for all ui messages/commands. It is not REST conform and probably
+  should be better WebSocket or WebTransport. Same serialization is used for quic or web server.
+* egui page trait abstract the usage of command bus for backend communication
+* the model sea entities are used for backend but also for ui to reuse the structs and not values.
+
 # Why Rust matters
 
 For years similar application was done using following technology stack with strick separation of client and server development.
