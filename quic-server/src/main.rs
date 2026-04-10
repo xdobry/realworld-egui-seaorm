@@ -3,18 +3,15 @@
 //! Checkout the `README.md` for guidance.
 
 use std::{
-    ascii, fs, io,
-    net::SocketAddr,
-    path::{self, Path, PathBuf},
-    str,
-    sync::Arc, time::Duration,
+    env, fs, io, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration
 };
 
 mod common;
 
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{Context, Result, bail};
 use app_core::api::{UICommand, UIResult};
 use clap::Parser;
+use dotenvy::dotenv;
 use proto::crypto::rustls::QuicServerConfig;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer, pem::PemObject};
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
@@ -137,6 +134,20 @@ async fn run(options: Opt) -> Result<()> {
     let endpoint = quinn::Endpoint::server(server_config, options.listen)?;
     eprintln!("listening on {}", endpoint.local_addr()?);
 
+    dotenv().ok();
+    let database_url = env::var("DATABASE_URL")
+        .expect("DATABASE_URL must be set");
+
+    let mut opt = ConnectOptions::new("postgres://realworld:realworld@localhost/realworld");
+    opt.max_connections(10)
+        .min_connections(2)
+        .connect_timeout(Duration::from_secs(10))
+        .idle_timeout(Duration::from_secs(300))
+        .sqlx_logging(true);
+
+    let db = Database::connect(opt).await?;
+    let db = Arc::new(db);
+
     while let Some(conn) = endpoint.accept().await {
         if options
             .connection_limit
@@ -152,7 +163,7 @@ async fn run(options: Opt) -> Result<()> {
             conn.retry().unwrap();
         } else {
             info!("accepting connection");
-            let fut = handle_connection(conn);
+            let fut = handle_connection(conn, db.clone());
             tokio::spawn(async move {
                 if let Err(e) = fut.await {
                     error!("connection failed: {reason}", reason = e.to_string())
@@ -164,7 +175,7 @@ async fn run(options: Opt) -> Result<()> {
     Ok(())
 }
 
-async fn handle_connection(conn: quinn::Incoming) -> Result<()> {
+async fn handle_connection(conn: quinn::Incoming, db: Arc<DatabaseConnection>) -> Result<()> {
     let connection = conn.await?;
     let span = info_span!(
         "connection",
@@ -176,16 +187,6 @@ async fn handle_connection(conn: quinn::Incoming) -> Result<()> {
             .protocol
             .map_or_else(|| "<none>".into(), |x| String::from_utf8_lossy(&x).into_owned())
     );
-
-    let mut opt = ConnectOptions::new("postgres://realworld:realworld@localhost/realworld");
-        opt.max_connections(10)
-            .min_connections(2)
-            .connect_timeout(Duration::from_secs(10))
-            .idle_timeout(Duration::from_secs(300))
-            .sqlx_logging(true);
-
-    let db = Database::connect(opt).await?;
-    let db = Arc::new(db);
 
     async {
         

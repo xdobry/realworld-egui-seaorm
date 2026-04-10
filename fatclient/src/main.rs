@@ -1,4 +1,4 @@
-use std::thread;
+use std::{env, thread};
 
 use egui::ViewportBuilder;
 use sea_orm::Database;
@@ -8,6 +8,7 @@ use core::api::{UIResult};
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc::{self};
 use command_bus::{CommandBus, UITask};
+use dotenvy::dotenv;
 
 fn main() -> Result<(), eframe::Error> {
 
@@ -15,6 +16,10 @@ fn main() -> Result<(), eframe::Error> {
         viewport: ViewportBuilder::default(),
         ..eframe::NativeOptions::default()
     };
+
+    dotenv().ok();
+    let database_url = env::var("DATABASE_URL")
+        .expect("DATABASE_URL must be set");
 
     eframe::run_native(
         "RealWorld App - Egui Fat Client",
@@ -27,7 +32,7 @@ fn main() -> Result<(), eframe::Error> {
                 let rt = Runtime::new().unwrap();
                 rt.block_on(async move {
                     // Example async task
-                    let db = Database::connect("postgres://realworld:realworld@localhost/realworld").await;
+                    let db = Database::connect(database_url).await;
                     if let Ok(db) = db {
                         while let Some(mut cmd) = command_rx.recv().await {
                             let result = handle_ui_command(cmd.command, &mut cmd.response, &db).await;

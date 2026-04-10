@@ -1,0 +1,20 @@
+---
+title: One code 3 architectures
+config:
+  look: handDrawn
+  theme: neutral
+---
+flowchart TD
+    fc["`Fat Client
+    __desktop__`"]
+    db[(SQL Data Base)]
+    qc["`Quic Client
+    __desktop__`"]
+    qs[Quic Server]
+    wc["`Web Client
+    __wasm browser__`"]
+    ws[Web Server]
+    fc --> db
+    qc -->|quic udp| qs --> db
+    wc -->|http| ws --> db
+  

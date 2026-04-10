@@ -1,0 +1,27 @@
+---
+title: module dependencies
+---
+flowchart TD
+    core
+    fatclient
+    migration
+    models
+    quic-client
+    quic-server
+    web-client
+    web-server
+    ui
+    command-bus
+    web-client-->ui
+    quic-client-->ui
+    server-core
+    migration-->models
+    core-->models
+    fatclient-->ui
+    fatclient-->server-core
+    ui-->command-bus
+    ui-->core
+    server-core-->core
+    server-core-->command-bus
+    quic-server-->server-core
+    web-server-->server-core

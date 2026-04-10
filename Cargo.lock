@@ -1874,6 +1874,7 @@ version = "0.1.0"
 dependencies = [
  "command-bus",
  "core",
+ "dotenvy",
  "eframe",
  "egui",
  "egui_extras",
@@ -4295,6 +4296,7 @@ dependencies = [
  "command-bus",
  "core",
  "directories-next",
+ "dotenvy",
  "postcard",
  "quinn",
  "quinn-proto",

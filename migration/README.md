@@ -1,6 +1,21 @@
 # DB Setup
 
-This program is sea orm typical way to create all needed tables for the programm
+This program is sea orm typical way to create all needed tables for the program
+
+## Setup postgres db
+
+Start psql and create user and database
+
+    ```sh
+    psql -U postgres
+
+    CREATE ROLE realworld WITH LOGIN PASSWORD 'realworld';
+    CREATE DATABASE realworld OWNER realworld;
+    ```
+
+The db connection string is stored in `.env` file you may adapt this file
+or set **DATABASE_URL** env variable
+
 
 # Running Migrator CLI
 
@@ -44,14 +59,3 @@ This program is sea orm typical way to create all needed tables for the programm
     cargo run -- status
     ```
 
-## Setup postgres db
-
-Start psql and create user and database
-
-    psql -U postgres
-
-    CREATE ROLE realworld WITH LOGIN PASSWORD 'realworld';
-    CREATE DATABASE realworld OWNER realworld;
-
-The db connection string is stored in .env file you may adapt this file
-or set DATABASE_URL env variable
