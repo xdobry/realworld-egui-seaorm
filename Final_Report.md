@@ -43,8 +43,23 @@ I want the power of old systems back.
 It is quite a pleasure to use fast software with no leaks and it is even more important that some 
 fancy design with animation gemicks.
 
+# With the little help of AI
 
-# My conclusions aber using rust as programmin language
+The like to write code on my own. But I am using AI a lot as documentation manual or knowledge base.
+This way The AI makes the developing 
+
+Anyway I want to understand every line of code.
+But probably with some additional AI description this project can be made as template
+for agent based AI developing.
+I would be quite interesting if someone tries it out.
+
+Adding new entries or modifying existing ui should be not big problem for AI.
+
+AI can generate code from existing pattern but it is not good in creating new architectures or coding approaches
+especially in some never language.
+So perhaps some AI will main reader of this project and reproduce it somewhere else.
+
+# My conclusions aout using rust as programmin language
 
 Rust is powerfull low code system language.
 Programming typicall applications with crates like sea orm, serde, axum and egui are more or less same easy as using java or python.
