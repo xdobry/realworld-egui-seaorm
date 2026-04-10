@@ -1,25 +1,33 @@
 # Realworld app - rust egui multiple architecture demo
 
-This is prototype implementation of [realworl app](https://github.com/realworld-apps/realworld) using full stack rust libraries
+This is prototype implementation of [realworl app](https://github.com/realworld-apps/realworld) using full stack rust libraries.
+It is learning and programming fun project.
 
 It contains multiple architecture
 * fatclient (desktop client talks directly to sql server)
-* desktop client and server using quic protocol
+* desktop client (egui) and server using quic protocol
+* wasm spa web client (egui) and http server based on axum
+
+The ui and sever core was programmed only once.
+There are only few lines of code that difference each architecture
 
 It uses following rust libraries
 * [egui]() (ui interface)
 * [sea orm]() persistence to sql server
 * [quinn]() quic protocol for desktop client server. Secure ssl based protocol using udp.
+* [axum]() web server
+* [postcard]() message serialization
 
 # Goals of prototype
 
+* learn rust and known libraries on 'realworld' application
 * find out pattern for multi target rust architecture
 * use common rust code for client and server
 * full stack implementation using one programming language and shared code
 * test rust in typical enterprise scenarios like db application
 * evaluate reusing code for client and server, multi crate project
 * evaluate rust pattern that can be used instead on dynamic binding and reflection
-* try out another options beside html, java script and http.
+* try out another options beside html, java script, json and http for common enterprise applications
 
 # Architectural principles and decisions
 
@@ -142,4 +150,32 @@ It serves the frontend directly from web_client/dist folder (this can be set by 
 # Conclusions
 
 # Outlook
+
+There is a lot to do to make the demo suitable for production use.
+I noticed that are lot of code could be generated. I do not think that using rust macros is the good way for such complex systems
+and there is not possibiltiy to adapt generated code.
+
+I am generally interested in frameworks for rapid application development such like
+* ruby on rails
+* python django
+* python odoo
+* java spring boot
+* java hipster
+* delphi or lazarus (old but indeed really good and productive)
+
+There are a lot low code systems that allows user to program your own app using ui.
+The state is hold in database as huge metadata repository.
+So you program the system by manipulating database state.
+
+But this approach is not very good for many reasons.
+AI currenlty works better with text based definitions. 
+Text is better to be managed by systems like git.
+
+So I think if using text based mda with good language server support would be good approach.
+I have made some tries with textx and it works good.
+
+If you have ideas about it contact me mail@xdobry.de.
+
+
+
 
