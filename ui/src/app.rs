@@ -1,4 +1,5 @@
 use eframe::Storage;
+use egui::{Align, Layout, global_theme_preference_switch};
 use models::Uuid;
 use command_bus::CommandBus;
 use crate::{ 
@@ -17,6 +18,7 @@ pub struct FormsApp {
     pub selected_page: Option<usize>,
     pub pages: Vec<Box<dyn Page>>,
     pub pending_actions: usize,
+    pub about_window: bool,
 }
 
 
@@ -42,6 +44,7 @@ impl FormsApp {
             pages: Vec::new(),
             selected_page: None,
             pending_actions: 0,
+            about_window: false,
         }
     }
 }
@@ -60,7 +63,12 @@ impl eframe::App for FormsApp {
         egui::SidePanel::left("left_panel")
             .exact_width(100.0)
             .show(ctx, |ui| {
-                ui.strong("Navigation");
+                ui.horizontal(|ui| {
+                    if ui.button("Help").clicked() {
+                        self.about_window = true;
+                    }
+                    global_theme_preference_switch(ui);
+                });
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     let resp = ui.button("Articles");
                     if resp.clicked() {
@@ -160,6 +168,28 @@ impl eframe::App for FormsApp {
                     }
                 }
 
+            }
+            if self.about_window {
+                egui::Window::new("About")
+                    .collapsible(false)
+                    .resizable(false)
+                    .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]) // Center the modal
+                    .show(ctx, |ui| {
+                        ui.with_layout(Layout::top_down(Align::Center), |ui| {
+                            ui.heading("RealWorld Demo");
+                            ui.spacing();
+                            ui.label("Realworld example app implemented in Rust using egui and SeaORM.");
+                            ui.label("MIT License");
+                            ui.spacing();
+                            ui.hyperlink_to("GitHub Site", "https://github.com/xdobry/realworld-egui-seaorm");
+                            ui.label("Author: Artur T. <mail@xdobry.de>");
+                        });
+                        ui.spacing();
+                        if ui.button("Cancel").clicked() {
+                            self.about_window = false;
+                        }
+                    });
+                ui.disable();
             }
         });
         if self.pending_actions>0 {

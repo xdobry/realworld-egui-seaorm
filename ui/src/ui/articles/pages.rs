@@ -151,19 +151,21 @@ impl Page for ArticleNew {
     fn as_any(&self) -> &dyn Any {
         self
     }
-    fn update(&mut self, _tx: &mut CommandBus,emit: &mut dyn FnMut(PageAction)) {
+    fn update(&mut self, tx: &mut CommandBus,emit: &mut dyn FnMut(PageAction)) {
         if let Ok(msg) = self.event_bus.try_recv() {
             match msg {
                 UIResult::Created => {
                     self.page_state = PageState::Final;
                 },
                 UIResult::DbError(msg) => {
+                    self.page_state = PageState::Initial;
                     emit(PageAction::AddError(msg));
                 },
                  _ => {
                 }
             }
         }
+        self.article_form.update(tx, &mut *emit);
     }
 }
 

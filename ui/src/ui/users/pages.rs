@@ -12,7 +12,7 @@ use crate::ui::users::tabs::{UserFavoritesTab, UserFollowersTab};
 use crate::ui::core::page::Form;
 
 use models::entity::users;
-use models::{DateTimeWithTimeZone, Uuid};
+use models::Uuid;
 
 pub struct UserTable {
     users: Vec<users::Model>,
@@ -45,6 +45,9 @@ impl Page for UserTable {
             TableAction::SelectItem(user_id, _label) => {
                 self.event_bus.send_task(tx, UICommand::User(UserCommand::Load(user_id)));
             }
+            TableAction::DeleteItem(user_id) => {
+                self.event_bus.send_task(tx, UICommand::User(UserCommand::Delete(user_id)));
+            }
             _ => {
 
             }
@@ -64,6 +67,9 @@ impl Page for UserTable {
                         }
                     }
                 }
+                UIResult::Deleted(id) => {
+                    self.users.retain(|u| u.id != id);
+                },
                 UIResult::DbError(msg) => {
                     emit(PageAction::AddError(msg));
                 },
@@ -256,6 +262,7 @@ impl Page for UserEdit {
                     self.page_state = PageState::Final;
                 },
                 UIResult::DbError(msg) => {
+                    self.page_state = PageState::Initial;
                     emit(PageAction::AddError(msg));
                 },
                 _ => {

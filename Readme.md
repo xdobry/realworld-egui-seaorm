@@ -47,6 +47,18 @@ I noticed to use rust effectively I should not copy the patterns I know from Jav
 
 It is very refreshing to compile program to small executable and do not need huge runtime and tons of dependencies.
 
+## Concreate solved challanges
+
+* egui runs one thread. The interaction with db requires async function calls that are directly not possible in egui code.
+  To separate it messages like (load user, create uses) are send to async able worker via message bus (based on msp).
+  This lead to somekind to ELM-Architecture where UI communicates to backend via async messages
+* ui in desktop use tokio for async communication with db or quic server the wasm ui can not use tokio but use poll-promise the is abstraction as command bus that
+  implement this for desktop and wasm variant differently
+* messages are serialized to compact binary using postcard serde library. The web server has only one endpoint for all ui messages/commands. It is not REST conform and probably
+  should be better WebSocket or WebTransport. Same serialization is used for quic or web server.
+* egui page trait abstract the usage of command bus for backend communication
+* the model sea entities are used for backend but also for ui to reuse the structs and not values.
+
 # Why Rust matters
 
 For years similar application was done using following technology stack with strick separation of client and server development.
@@ -148,6 +160,22 @@ Open browser on http://locahost:8081.
 It serves the frontend directly from web_client/dist folder (this can be set by FRONTEND_DIST env variable see .env file)
 
 # Conclusions
+
+# My conclusions aber using rust as programmin language
+
+Rust is powerfull low code system language.
+Programming typicall applications with crates like sea orm, serde, axum and egui are more or less same easy as using java or python.
+The rust abstraction are powerfull enough to write also "business" applications with similar efficieny like Java, C#, Typescript or Python.
+Rust enum and match are very powerfull to write readable code.
+Rust compiler can be your best friend because it support you to write valid typesafe code.
+
+# egui
+
+Egui was primary developed in gaming area.
+The are not build in options for programmin powerfull data grid.
+It is very pleasent for user because it is fast.
+Probably egui should not be used to get html/css or some special corporate design.
+Programming own special egui elements are quite easy because of immediate mode.
 
 # Outlook
 
