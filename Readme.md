@@ -4,13 +4,11 @@ This project is a prototype implementation of the [realworl app](https://github.
 It is learning and programming fun project.
 The prototype concerns only parts of needed functionality and features needed for production.
 
-t is primarily a learning and experimentation project. The prototype implements only a subset of the features required for a production-ready system.
-
 The project demonstrates multiple architectural variants:
 
-* Fat client: Desktop client connects directly to the SQL database
-* Client–server (desktop): egui desktop client communicates with a server via QUIC
-* Web (WASM SPA): egui-based WebAssembly client communicates with an HTTP server built with Axum
+* *Fat client:* Desktop client connects directly to the SQL database
+* *Client–server* (desktop): desktop client communicates with a server via QUIC
+* *Web (WASM SPA)*: egui-based WebAssembly client communicates with an HTTP server built with Axum.
 
 ![screenshot](docu_res/architecture_types.png)
 
