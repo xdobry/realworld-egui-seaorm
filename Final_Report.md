@@ -1,87 +1,93 @@
 # Conclusions
 
-It was quite a fun to create the real world demo.
-I have learned a lot. I could find out things that I am never excepted before.
+Building this RealWorld demo was a lot of fun. I learned a great deal and discovered many things I did not expect beforehand.
 
 # Why Rust matters
 
-My opinion about Rust and why it is worth to bring rust as replacment for java, python or typescript.
+This section reflects my personal view on Rust and why it may be a strong alternative to languages such as Java, Python, or TypeScript.
 
-For years similar application was done using following technology stack with strick separation of client and server development.
-* server
- * java spring
- * node
- * python django
-* frontend
- * browser with react, angular, html
+For many years, similar applications were built using a traditional stack with a strict separation between client and server:
 
-Rust is the chance to dramatically increase performance and reduce memory and cpu usage for both server and client.
-Rust is opportunity to use same code for client and server developing.
-Rust with strict typed compiler give the chance to validate code at compile time and provide deep checks needed in time
-the code can be generated automatically.
+Server-side:
 
-I am quite sure that html and browser are wrong basis for enterprise ui.
-A one glance at memory usage of browser shows that it can not be right.
-Egui as desktop and even egui as wasm in browser is much more performant and need less resources.
+* Java (Spring)
+* Node.js
+* Python (Django)
 
-Wasm can be the key technology for secure and performant sand box environment for client and server.
+Frontend:
 
-For mostly all applications the developing cost were the main part of software total cost ownership.
-But currently the developing is becoming cheaper due to use of AI.
-So the runtime cost of software will be more important.
-You can not ignore that rust written application are at factor 10-100 smaller and take less resources.
+* Browser-based applications using React, Angular, HTML, and JavaScript
 
-My assumption is that also developing with rust can be cheaper in long term when more good rust programmer are available 
-and more best practices are establish.
-Typical architectures produce overhead because client and server developing is split.
-Using one language for both is biggest saving point.
-Python or Typescript are interesting options but they can not beat the performance of compiled language.
-Compiling rust for multiple targets is not the problem now. It is equal portable as vm based languages.
+Rust provides an opportunity to significantly improve performance while reducing memory and CPU usage on both the client and server side.
 
-The older systems (smalltalk, delphi , visual basic) was very effective because one could develop everything in one language and one environment.
-I want the power of old systems back.
-It is quite a pleasure to use fast software with no leaks and it is even more important that some 
-fancy design with animation gemicks.
+It also enables code sharing between client and server, which reduces duplication and improves consistency.
+With Rust’s strict type system and compiler guarantees, many issues can be detected at compile time, enabling deeper correctness checks earlier in the development process.
+Code generation can also be integrated safely into this model.
+
+I am increasingly convinced that HTML and the browser are not ideal foundations for enterprise user interfaces. A quick look at browser memory consumption suggests that this model is inherently heavy.
+In contrast, egui, both as a desktop UI and as a WebAssembly target in the browser, is significantly more lightweight and performant.
+
+WebAssembly itself may become a key technology for secure and efficient sandboxed execution environments for both client and server-side use cases.
+
+For most enterprise applications, development cost has traditionally been the dominant part of total cost of ownership. However, with the increasing use of AI, development is becoming cheaper. As a result, runtime cost will become more important.
+
+It is difficult to ignore that Rust applications can be 10–100× smaller and significantly more resource-efficient.
+In the long term, Rust development may also become cheaper as the ecosystem matures, more experienced developers become available, and best practices stabilize.
+
+Traditional architectures often introduce overhead due to strict separation between client and server development. A single-language approach can eliminate much of this duplication and complexity.
+
+Languages like Python or TypeScript are attractive in terms of productivity, but they cannot match the performance of compiled languages. Rust’s ability to compile to multiple targets makes it just as portable as VM-based languages.
+
+Older ecosystems such as Smalltalk, Delphi, and Visual Basic were highly productive because they allowed developers to build entire systems in a single language and environment. 
+In some sense, Rust brings back that idea in a modern form.
+
+There is also great value in fast, reliable software with no memory leaks. In many cases, this is more important than fancy UI effects or animations.
+
+
 
 # With the little help of AI
 
-The like to write code on my own. But I am using AI a lot as documentation manual or knowledge base.
-This way The AI makes the developing 
+I enjoy writing code myself, but I also use AI extensively as a documentation tool and knowledge assistant.
 
-Anyway I want to understand every line of code.
-But probably with some additional AI description this project can be made as template
-for agent based AI developing.
-I would be quite interesting if someone tries it out.
+In this project, I aim to understand every line of code. At the same time, I believe that with better AI-assisted documentation, this project could evolve into a template for agent-based software development.
 
-Adding new entries or modifying existing ui should be not big problem for AI.
+It would be interesting to see whether AI systems can reproduce or extend such architectures.
 
-AI can generate code from existing pattern but it is not good in creating new architectures or coding approaches
-especially in some never language.
-So perhaps some AI will main reader of this project and reproduce it somewhere else.
+Adding new features or modifying the UI should be relatively straightforward for AI systems, especially when patterns are consistent.
 
-# My conclusions aout using rust as programmin language
+AI is currently good at generating code based on existing patterns, but less reliable when it comes to designing entirely new architectures or paradigms—especially in unfamiliar languages. Because of this, AI may become more of a “reader and extender” of such systems rather than a primary architect
 
-Rust is powerfull low code system language.
-Programming typicall applications with crates like sea orm, serde, axum and egui are more or less same easy as using java or python.
-The rust abstraction are powerfull enough to write also "business" applications with similar efficieny like Java, C#, Typescript or Python.
-Rust enum and match are very powerfull to write readable code.
-Rust compiler can be your best friend because it support you to write valid typesafe code.
+# My Conclusions About Rust as a Programming Language
+
+Rust is a powerful systems programming language that can also be used effectively for application development.
+
+Building typical enterprise applications using libraries such as SeaORM, Serde, Axum, and Egui is nearly as convenient as using Java or Python, while offering significantly better performance characteristics.
+
+Rust’s abstractions are strong enough to support “business application” development with efficiency comparable to Java, C#, TypeScript, or Python.
+
+Enums and pattern matching are particularly powerful and contribute to highly readable code.
+
+The Rust compiler becomes a strong partner in development, helping enforce type safety and correctness at compile time.
 
 # Egui - UI Library (intermediate model)
 
-Egui  was primary developed in gaming area as rust reimplementation of imgui.
-The are not build in options for programmin powerfull data grid.
-It is very pleasant for user because it is fast.
-Probably egui should not be used to get html/css or some special corporate design.
-Programming own special egui elements are quite easy because of immediate mode.
+Egui was originally developed in the gaming domain as a Rust reimplementation of immediate-mode GUI concepts similar to ImGui.
+
+It does not provide built-in support for complex enterprise features such as advanced data grids or rich layout systems.
+
+However, it is very responsive and pleasant to use because of its immediate-mode design.
+
+Egui is not intended to replicate HTML/CSS-based UI systems or corporate design frameworks. Instead, it favors simplicity and performance.
+
+Creating custom UI components in Egui is relatively easy due to its immediate-mode architecture.
 
 # Outlook
 
-There is a lot to do to make the demo suitable for production use.
-I noticed that are lot of code could be generated. I do not think that using rust macros is the good way for such complex systems
-and there is not possibility to adapt generated code.
+There is still significant work required to make this demo suitable for production use.
 
-I am generally interested in frameworks for rapid application development such like
+I have observed that much of the code could be generated. However, I do not believe that Rust macros are the right solution for complex systems of this type, as they are difficult to adapt once generated.
+
+I am generally interested in frameworks for rapid application development, such as:
 * ruby on rails
 * python django
 * [python odoo](https://www.odoo.com/)
@@ -89,15 +95,11 @@ I am generally interested in frameworks for rapid application development such l
 * java hipster
 * delphi or [lazarus](https://www.lazarus-ide.org/) (old but indeed really good and productive)
 
-There are a lot low code systems that allows user to program your own app using ui.
-The state is hold in database as huge metadata repository.
-So you program the system by manipulating database state.
+Many low-code platforms allow applications to be built by modeling UI and storing application state in a metadata database. In such systems, the application is essentially defined by database state.
 
-But this approach is not very good for many reasons.
-AI currently works better with text based definitions. 
-Text is better to be managed by systems like git.
+However, this approach has limitations. Modern AI systems work better with text-based representations, and text integrates more naturally with version control systems such as Git.
 
-So I think if using text based mda with good language server support would be good approach.
-I have made some tries with [textx](https://github.com/textx/textx) and it works good.
+For this reason, I believe that text-based model-driven architectures (MDA), combined with good language server support, may be a promising direction. I have experimented with tools such as TextX
+, and found them quite effective.
 
-If you have ideas about it contact me mail@xdobry.de.
+If you have ideas or would like to collaborate, feel free to contact me at: mail@xdobry.de

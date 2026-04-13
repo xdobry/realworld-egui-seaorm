@@ -1,18 +1,21 @@
-# Realworld app - rust egui multiple architecture demo
+# RealWorld App – Rust + egui Multi-Architecture Demo
 
-This is prototype implementation of [realworl app](https://github.com/realworld-apps/realworld) using full stack rust libraries.
+This project is a prototype implementation of the [realworl app](https://github.com/realworld-apps/realworld) using a full-stack Rust approach.
 It is learning and programming fun project.
 The prototype concerns only parts of needed functionality and features needed for production.
 
-It contains multiple architecture
-* fat client (desktop client talks directly to sql server)
-* desktop client (egui) and server using quic protocol
-* wasm spa web client (egui) and http server based on axum
+t is primarily a learning and experimentation project. The prototype implements only a subset of the features required for a production-ready system.
+
+The project demonstrates multiple architectural variants:
+
+* Fat client: Desktop client connects directly to the SQL database
+* Client–server (desktop): egui desktop client communicates with a server via QUIC
+* Web (WASM SPA): egui-based WebAssembly client communicates with an HTTP server built with Axum
 
 ![screenshot](docu_res/architecture_types.png)
 
-The ui and sever core was programmed only once.
-There are only few lines of code that difference each architecture.
+The UI and server core are implemented only once and reused across all variants.
+Only a few lines of code differ between the architectures.
 
 It uses following rust libraries
 * [egui](https://github.com/emilk/egui) (ui interface)
@@ -23,25 +26,26 @@ It uses following rust libraries
 
 # Goals of prototype
 
-* learn rust and known libraries on 'realworld' application
-* find out pattern for multi target rust architecture
-* use common rust code for client and server
-* full stack implementation using one programming language and shared code
-* test rust in typical enterprise scenarios like db application
-* evaluate reusing code for client and server, multi crate project
-* evaluate rust pattern that can be used instead on dynamic binding and reflection
-* try out another options beside html, java script, json and http for common enterprise applications
-* find out how write sql database independent code (sea orm)
+* Learn Rust and its ecosystem using a realistic “RealWorld” application
+* Explore patterns for multi-target Rust architectures
+* Share code between client and server
+* Build a full-stack system using a single programming language
+* Evaluate Rust in typical enterprise scenarios (e.g., database applications)
+* Experiment with multi-crate project structures and code reuse
+* Explore alternatives to dynamic binding and reflection in Rust
+* Investigate alternatives to HTML, JavaScript, JSON, and HTTP for enterprise applications
+* Explore how to write database-independent code using SeaORM
 
 # Non considered parts
 
-The prototype does not consider
-* security
-* performance test
-* polished ui
-* user experience considerations
+This prototype does not focus on:
 
-It is not intended as template or framework for such kind of applications.
+* Security
+* Performance benchmarking
+* Polished UI
+* User experience
+
+It is not intended to serve as a production template or framework.
 
 # Documentation
 
@@ -51,6 +55,8 @@ It is not intended as template or framework for such kind of applications.
 
 # Feedback and Contributing
 
-I welcome contributions from the community. If you find but or something odd, please open an issue — even small notes help.
-I am also interesting to improve the use case and add additional functionality or make another architecture for example with (leptos, yew or dioxus)
-You can also create github issue or just drop me an email mail@xdobry.de.
+Contributions are welcome. If you find a bug or notice anything unusual, please open an issue—small observations are valuable.
+
+I am also interested in improving the use case, adding features, or exploring additional architectures (e.g., with Leptos, Yew, or Dioxus).
+
+Feel free to open a GitHub issue or contact me at: mail@xdobry.de

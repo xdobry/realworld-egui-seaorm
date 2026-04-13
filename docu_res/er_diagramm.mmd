@@ -1,0 +1,67 @@
+erDiagram
+    USERS ||--o{ ARTICLES : writes
+    USERS ||--o{ COMMENTS : writes
+    USERS ||--o{ ARTICLE_FAVORITES : favorites
+    USERS ||--o{ USER_FOLLOWS : follower
+    USERS ||--o{ USER_FOLLOWS : followee
+
+    ARTICLES ||--o{ COMMENTS : has
+    ARTICLES ||--o{ ARTICLE_FAVORITES : is_favorited
+    ARTICLES ||--o{ ARTICLE_TAGS : tagged_with
+
+    TAGS ||--o{ ARTICLE_TAGS : used_in
+
+    USERS {
+        uuid id PK
+        string username
+        string email
+        string password_hash
+        text bio
+        text image
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    ARTICLES {
+        uuid id PK
+        string slug
+        string title
+        text description
+        text body
+        uuid author_id FK
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    COMMENTS {
+        uuid id PK
+        text body
+        uuid author_id FK
+        uuid article_id FK
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    TAGS {
+        uuid id PK
+        string name
+        timestamptz created_at
+    }
+
+    ARTICLE_FAVORITES {
+        uuid user_id FK
+        uuid article_id FK
+        timestamptz created_at
+    }
+
+    ARTICLE_TAGS {
+        uuid tag_id FK
+        uuid article_id FK
+        timestamptz created_at
+    }
+
+    USER_FOLLOWS {
+        uuid follower_id FK
+        uuid followee_id FK
+        timestamptz created_at
+    }

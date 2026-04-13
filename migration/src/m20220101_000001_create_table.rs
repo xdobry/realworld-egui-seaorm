@@ -71,7 +71,7 @@ impl MigrationTrait for Migration {
                     .col(timestamp_with_time_zone("updated_at").default(Expr::current_timestamp()))
                     .foreign_key(
                         ForeignKey::create().name("fk_comments_author")
-                            .from("articles", "author_id")
+                            .from("comments", "author_id")
                             .to("users", "id")
                             .on_delete(ForeignKeyAction::Cascade))
                     .foreign_key(
