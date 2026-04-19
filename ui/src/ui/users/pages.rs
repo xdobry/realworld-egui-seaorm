@@ -64,6 +64,9 @@ impl Page for UserTable {
                         }
                         UserResult::Users(users) => {
                             self.users = users;
+                        },
+                        _ => {
+
                         }
                     }
                 }
