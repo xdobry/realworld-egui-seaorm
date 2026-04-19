@@ -44,7 +44,7 @@ pub fn show_comments_author_table(ui: &mut egui::Ui, comments: &Vec<CommentAutho
         .body(|body| {
             body.rows(text_height, comments.len(), |mut row| {
                 let comment = comments.get(row.index()).unwrap();
-                table_mode.add_action_rows(&mut row, comment.id, "", &mut table_action);
+                table_mode.add_action_rows(&mut row, comment.id, "", &mut table_action, None);
                 row.col(|ui| {
                     ui.label(&comment.author_name);
                 });

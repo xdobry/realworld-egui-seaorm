@@ -10,7 +10,7 @@ use models::entity::user_follows;
 use models::{DateTimeWithTimeZone, Uuid};
 use models::entity::article_favorites;
 
-use crate::{ui::{article_favorites::tables::show_user_favorites_table, articles::tables::show_articles_table, core::{page::{Form, PageAction}, tables::{TableAction, TableMode}}, user_follows::tables::show_user_followers_table, users::tables::show_users_table}};
+use crate::ui::{article_favorites::tables::show_user_favorites_table, articles::{pages::ArticleEdit, tables::show_articles_table}, core::{page::{Form, PageAction}, tables::{TableAction, TableMode}}, user_follows::tables::show_user_followers_table, users::tables::show_users_table};
 use command_bus::{CommandBus, UIBus};
 
 #[derive(Default)]
@@ -143,7 +143,7 @@ impl Form for UserFavoritesTab {
             self.initialized = true;
         }
         if let Some(user_favorites) = &self.user_favorites {
-            if ui.button("Add Follower").clicked() {
+            if ui.button("Add Favorite").clicked() {
                 self.opened = true;
                 if self.articles.is_none() {
                     self.event_bus.send_task(tx,UICommand::Article(ArticleCommand::Reload));
@@ -153,6 +153,9 @@ impl Form for UserFavoritesTab {
             match table_action {
                 TableAction::DeleteItem(ids) => {
                     self.event_bus.send_task(tx,UICommand::ArticleFavorite(ArticleFavoriteCommand::Delete(ids)));
+                },
+                TableAction::LinkItem(id) => {
+                    self.event_bus.send_task(tx, UICommand::Article(ArticleCommand::Load(id)));
                 }
                 _ => {
                     
@@ -208,12 +211,15 @@ impl Form for UserFavoritesTab {
                 UIResult::Article(ArticleResult::Articles(articles)) => {
                     self.articles = Some(articles);
                 },
+                UIResult::Article(ArticleResult::Article(article)) => {
+                    emit(PageAction::AddPage(Box::new(ArticleEdit::new(article))));
+                },
                 UIResult::Created => {
                     self.initialized = false;
                 },
-                UIResult::Deleted(user_id) => {
+                UIResult::ArticleFavorite(ArticleFavoriteResult::Deleted((_user_id, article_id))) => {
                     if let Some(user_favorites) = self.user_favorites.as_mut() {
-                        user_favorites.retain(| at | at.user_id != user_id);
+                        user_favorites.retain(| at | at.article_id != article_id);
                     }
                 },
                 UIResult::DbError(err) => {

@@ -5,7 +5,7 @@ use command_bus::CommandBus;
 use crate::{ 
     ui::{articles::pages::{ArticleNew, ArticleTable}, 
     core::page::{DbError, Page, PageAction}, 
-    tags::pages::{TagNew, TagTable}, users::pages::{UserNew, UserTable}}};
+    tags::pages::{TagNew, TagTable}, users::pages::{UserEdit, UserTable}}};
 use core::articles::dto::ArticleUI;
 use core::tags::dto::TagUI;
 use core::users::dto::UserUI;
@@ -88,9 +88,9 @@ impl eframe::App for FormsApp {
                         }
                     }                  
                     if resp.clicked_by(egui::PointerButton::Secondary) {
-                        if !self.swith_to_page::<UserNew>() {
+                        if !self.swith_to_page::<UserEdit>() {
                             let now = core::time_now();
-                            self.add_page(UserNew::new(UserUI {
+                            self.add_page(UserEdit::new_create(UserUI {
                                 id: Uuid::new_v4(),
                                 created_at: now,
                                 updated_at: now,

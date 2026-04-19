@@ -39,7 +39,7 @@ pub fn show_user_followers_table(ui: &mut egui::Ui, followers: &Vec<UserFollower
         .body(|body| {
             body.rows(text_height, followers.len(), |mut row| {
                 let follower = followers.get(row.index()).unwrap();
-                table_mode.add_action_rows(&mut row, (follower.follower_id,follower.followee_id), "", &mut table_action);
+                table_mode.add_action_rows(&mut row, (follower.follower_id,follower.followee_id), "", &mut table_action, None);
                 row.col(|ui| {
                     ui.label(&follower.follower_name);
                 });

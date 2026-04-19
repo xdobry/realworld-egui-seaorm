@@ -1,9 +1,9 @@
-use models::entity::users::{ActiveModel, Entity, Column};
-use sea_orm::Iterable;
+use models::entity::users::{Entity};
 use sea_orm::{prelude::DateTimeWithTimeZone};
 use sea_orm::entity::prelude::*;
 
 use models::entity::users::{Model};
+use serde::{Deserialize, Serialize};
 
 use crate::dto::ChangeRecord;
 
@@ -50,6 +50,20 @@ impl UserUI {
         ChangeRecord::from_models::<Entity>(&self.to_model(), orig)
     }
 
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct LoginUser {
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct LoginResponse {
+    pub user_id: Uuid,
+    pub user_name: String,
+    pub is_admin: bool,
+    pub token: String,
 }
 
 

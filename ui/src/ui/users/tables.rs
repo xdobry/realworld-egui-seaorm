@@ -40,7 +40,7 @@ pub fn show_users_table(ui: &mut egui::Ui, items: &Vec<users::Model>, table_mode
         .body(|body| {
             body.rows(text_height, items.len(), |mut row| {
                 let item = items.get(row.index()).unwrap();
-                table_mode.add_action_rows(&mut row, item.id, &item.username, &mut table_action);
+                table_mode.add_action_rows(&mut row, item.id, &item.username, &mut table_action, None);
                 row.col(|ui| {
                     ui.label(&item.username);
                 });
