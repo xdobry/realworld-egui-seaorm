@@ -74,12 +74,15 @@ The Rust compiler becomes a strong partner in development, helping enforce type 
 Egui was originally developed in the gaming domain as a Rust reimplementation of immediate-mode GUI concepts similar to ImGui.
 
 It does not provide built-in support for complex enterprise features such as advanced data grids or rich layout systems.
-
 However, it is very responsive and pleasant to use because of its immediate-mode design.
-
 Egui is not intended to replicate HTML/CSS-based UI systems or corporate design frameworks. Instead, it favors simplicity and performance.
 
 Creating custom UI components in Egui is relatively easy due to its immediate-mode architecture.
+
+Recently, many new UI frameworks have been emerging in Rust. Several of them are strong candidates for building cross-platform business applications.
+
+The architecture presented in this project is intentionally designed to be flexible, so that egui can be replaced with another UI framework if needed.
+This makes it easier to compare different UI approaches while keeping the rest of the system unchanged.
 
 # Outlook
 

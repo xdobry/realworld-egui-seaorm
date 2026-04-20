@@ -6,7 +6,7 @@ The prototype concerns only parts of needed functionality and features needed fo
 
 The project demonstrates multiple architectural variants:
 
-* *Fat client:* Desktop client connects directly to the SQL database
+* *Fat client:*git s Desktop client connects directly to the SQL database
 * *Client–server* (desktop): desktop client communicates with a server via QUIC
 * *Web (WASM SPA)*: egui-based WebAssembly client communicates with an HTTP server built with Axum.
 
