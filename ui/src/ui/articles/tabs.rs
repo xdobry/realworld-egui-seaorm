@@ -1,11 +1,11 @@
 use egui::{Id, Modal};
 use models::Uuid;
 
-use crate::{ui::{article_favorites::tables::show_article_favorites_table, 
+use crate::ui::{article_favorites::tables::show_article_favorites_table, 
     article_tags::tables::show_article_tags_table, 
     comments::{forms::CommentForm, tables::show_comments_author_table}, 
     core::{page::{Form, PageAction}, tables::{TableAction, TableMode}}, 
-    tags::tables::show_tags_table, users::tables::show_users_table}};
+    tags::tables::show_tags_table, users::{pages::UserEdit, tables::show_users_table}};
 
 use command_bus::{CommandBus, UIBus};
 
@@ -161,6 +161,9 @@ impl Form for ArticleFavoriteTab {
             match table_action {
                 TableAction::DeleteItem(ids) => {
                     self.event_bus.send_task(tx,UICommand::ArticleFavorite(ArticleFavoriteCommand::Delete(ids)));
+                },
+                TableAction::LinkItem(user_id) => {
+                    self.event_bus.send_task(tx,UICommand::User(UserCommand::Load(user_id)));
                 }
                 _ => {
                     
@@ -204,7 +207,7 @@ impl Form for ArticleFavoriteTab {
         }
     }
 
-    fn update<F>(&mut self, _tx: &mut CommandBus, mut _emit: F) 
+    fn update<F>(&mut self, _tx: &mut CommandBus, mut emit: F) 
     where 
         F: FnMut(PageAction),
     {
@@ -213,17 +216,23 @@ impl Form for ArticleFavoriteTab {
                 UIResult::ArticleFavorite(ArticleFavoriteResult::ArticleFavorites(article_favorites)) => {
                    self.article_favorites = Some(article_favorites);
                 },
+                UIResult::ArticleFavorite(ArticleFavoriteResult::Deleted((user_id, _article_id))) => {
+                    if let Some(article_tags) = self.article_favorites.as_mut() {
+                        article_tags.retain(| at: &ArticleFavoriteUI | at.user_id != user_id);
+                    }
+                },
                 UIResult::User(UserResult::Users(users)) => {
                     self.users = Some(users);
+                },
+                UIResult::User(UserResult::User(user)) => {
+                    emit(PageAction::AddPage(Box::new(UserEdit::new(user))));
                 },
                 UIResult::Created => {
                     self.initialized = false;
                 },
-                UIResult::Deleted(tag_id) => {
-                    if let Some(article_tags) = self.article_favorites.as_mut() {
-                        article_tags.retain(| at | at.user_id != tag_id);
-                    }
-                },
+                UIResult::DbError(err) => {
+                    emit(PageAction::AddError(err));
+                }
                 _ => {
                     
                 }

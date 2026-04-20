@@ -45,7 +45,7 @@ pub fn show_articles_table(ui: &mut egui::Ui, articles: &Vec<articles::Model>, t
         .body(|body| {
             body.rows(text_height, articles.len(), |mut row| {
                 let article = articles.get(row.index()).unwrap();
-                table_mode.add_action_rows(&mut row, article.id, &article.title, &mut table_action);
+                table_mode.add_action_rows(&mut row, article.id, &article.title, &mut table_action, None);
                 row.col(|ui| {
                     ui.label(&article.slug);
                 });

@@ -39,7 +39,7 @@ pub fn show_article_favorites_table(ui: &mut egui::Ui, favorites: &Vec<ArticleFa
         .body(|body| {
             body.rows(text_height, favorites.len(), |mut row| {
                 let favorite = favorites.get(row.index()).unwrap();
-                table_mode.add_action_rows(&mut row, (favorite.article_id,favorite.user_id), "", &mut table_action);
+                table_mode.add_action_rows(&mut row, (favorite.user_id,favorite.article_id), "", &mut table_action, Some(favorite.user_id));
                 row.col(|ui| {
                     ui.label(&favorite.user_name);
                 });
@@ -86,7 +86,7 @@ pub fn show_user_favorites_table(ui: &mut egui::Ui, articles: &Vec<UserFavoriteU
         .body(|body| {
             body.rows(text_height, articles.len(), |mut row| {
                 let article = articles.get(row.index()).unwrap();
-                table_mode.add_action_rows(&mut row, (article.article_id,article.user_id), "", &mut table_action);
+                table_mode.add_action_rows(&mut row, (article.user_id,article.article_id), "", &mut table_action, Some(article.article_id));
                 row.col(|ui| {
                     ui.label(&article.article_title);
                 });

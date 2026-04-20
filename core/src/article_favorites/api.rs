@@ -17,4 +17,5 @@ pub enum ArticleFavoriteCommand {
 pub enum ArticleFavoriteResult {
     ArticleFavorites(Vec<ArticleFavoriteUI>),
     UserFavorites(Vec<UserFavoriteUI>),
+    Deleted((Uuid,Uuid)),
 }

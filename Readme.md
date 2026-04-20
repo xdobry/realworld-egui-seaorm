@@ -12,6 +12,8 @@ The project demonstrates multiple architectural variants:
 
 ![screenshot](docu_res/architecture_types.png)
 
+![screenshot](docu_res/fatclient.gif)
+
 The UI and server core are implemented only once and reused across all variants.
 Only a few lines of code differ between the architectures.
 

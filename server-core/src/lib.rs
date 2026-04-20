@@ -168,7 +168,7 @@ pub async fn handle_ui_command(cmd: UICommand, result_tx: &mut ResponseChannel, 
                 },
                 ArticleFavoriteCommand::Delete(ids) => {
                     let _d = article_favorites::Entity::delete_by_id(ids).exec(db).await?;
-                    result_tx.send(UIResult::Deleted(ids.1));
+                    result_tx.send(UIResult::ArticleFavorite(ArticleFavoriteResult::Deleted(ids)));
                 }
             }
         },
@@ -250,6 +250,9 @@ pub async fn handle_ui_command(cmd: UICommand, result_tx: &mut ResponseChannel, 
                     let _update_res = users::Entity::update::<users::ActiveModel>(user.to_active_model::<users::Entity>()).validate()?.exec(db).await?;
                     result_tx.send(UIResult::Updated(id));
                 },
+                UserCommand::Login(_login_request) => {
+                    result_tx.send(UIResult::User(UserResult::LoginFailed("not implemented".into())));
+                }
             }
         }
         UICommand::UserFollower(user_follower_command) => {

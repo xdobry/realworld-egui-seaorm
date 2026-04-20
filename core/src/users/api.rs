@@ -1,7 +1,7 @@
 use sea_orm::entity::prelude::*;
 use serde::{Serialize, Deserialize};
 use models::entity::users::Model;
-use crate::dto::ChangeRecord;
+use crate::{dto::ChangeRecord, users::dto::{LoginResponse, LoginUser}};
 
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -11,6 +11,7 @@ pub enum UserCommand {
     Update(ChangeRecord),
     Load(Uuid),
     Delete(Uuid),
+    Login(LoginUser),
 }
 
 
@@ -18,4 +19,6 @@ pub enum UserCommand {
 pub enum UserResult {
     Users(Vec<Model>),
     User(Model),
+    Login(LoginResponse),
+    LoginFailed(String),
 }

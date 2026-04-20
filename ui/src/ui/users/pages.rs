@@ -34,7 +34,7 @@ impl Page for UserTable {
                     updated_at: now,
                     ..Default::default()
                 };               
-                page_action = PageAction::AddPage(Box::new(UserNew::new(new_user)));
+                page_action = PageAction::AddPage(Box::new(UserEdit::new_create(new_user)));
             }
             if ui.button("Close").clicked() {
                 page_action = PageAction::Close;
@@ -64,6 +64,9 @@ impl Page for UserTable {
                         }
                         UserResult::Users(users) => {
                             self.users = users;
+                        },
+                        _ => {
+
                         }
                     }
                 }
@@ -100,87 +103,23 @@ impl UserTable {
 }
 
 pub enum PageState {
-    Initial,
-    Running,
+    Show,
+    Update,
+    Updating,
     Final,
+    Create,
+    Creating,
 }
 
 impl PageState {
-    pub fn is_initial(&self) -> bool {
+    pub fn is_enabled(&self) -> bool {
         match self {
-            PageState::Initial => {
+            PageState::Update | PageState::Create => {
                 true
             }
             _ => {
                 false
             }
-        }
-    }
-}
-
-pub struct UserNew {
-    user: UserUI,
-    page_state: PageState,
-    event_bus: UIBus,
-}
-
-impl Page for UserNew {
-    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus) -> PageAction {
-        let mut page_action = PageAction::None;
-        ui.horizontal(|ui| {
-            match self.page_state {
-                PageState::Initial => {
-                    if ui.button("Create").clicked() {
-                        self.event_bus.send_task(tx,UICommand::User(UserCommand::Create(self.user.to_model())));
-                        self.page_state = PageState::Running;
-                    }
-                },
-                PageState::Running => {
-                    ui.label("Creating");
-                }
-                PageState::Final => {
-                    ui.label("Created");
-                }
-            }
-            if ui.button("Close").clicked() {
-                page_action = PageAction::Close;
-            }
-        });
-        ui.add_enabled_ui(self.page_state.is_initial(), |ui| {
-            ui_user(ui, &mut self.user);
-        });
-        page_action
-
-    }
-    fn title(&self) -> &str {
-        "New User"
-    }
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-    fn update(&mut self, _tx: &mut CommandBus,emit: &mut dyn FnMut(PageAction)) {
-        if let Ok(msg) = self.event_bus.try_recv() {
-            match msg {
-                UIResult::Created => {
-                    self.page_state = PageState::Final;
-                },
-                UIResult::DbError(msg) => {
-                    emit(PageAction::AddError(msg));
-                },
-                _ => {
-
-                }
-            }
-        }
-    }
-}
-
-impl UserNew {
-    pub fn new(user: UserUI) -> Self {       
-        Self {
-            event_bus: UIBus::default(),
-            user,
-            page_state: PageState::Initial,
         }
     }
 }
@@ -206,17 +145,35 @@ impl Page for UserEdit {
         let mut page_action = PageAction::None;
         ui.horizontal(|ui| {
             match self.page_state {
-                PageState::Initial => {
+                PageState::Update => {
                     if ui.button("Update").clicked() {
+                        self.user.updated_at = core::time_now();
                         self.event_bus.send_task(tx,UICommand::User(UserCommand::Update(self.user.to_change_record(&self.orig_user))));
-                        self.page_state = PageState::Running;
+                        self.page_state = PageState::Updating;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        self.page_state = PageState::Show;
                     }
                 },
-                PageState::Running => {
+                PageState::Show => {
+                    if ui.button("Start Update").clicked() {
+                        self.page_state = PageState::Update;
+                    }
+                },
+                PageState::Updating => {
                     ui.label("Updating");
+                }
+                PageState::Creating => {
+                    ui.label("Creating");
                 }
                 PageState::Final => {
                     ui.label("Updated");
+                },
+                PageState::Create => {
+                     if ui.button("Create").clicked() {
+                        self.event_bus.send_task(tx,UICommand::User(UserCommand::Create(self.user.to_model())));
+                        self.page_state = PageState::Creating;
+                    }
                 }
             }
             if ui.button("Close").clicked() {
@@ -227,16 +184,22 @@ impl Page for UserEdit {
             if ui.selectable_label(matches!(self.current_tab, UserTab::Details), "Details").clicked() {
                 self.current_tab = UserTab::Details;
             }
-            if ui.selectable_label(matches!(self.current_tab, UserTab::Followers), "Followers").clicked() {
-                self.current_tab = UserTab::Followers;
-            }
-            if ui.selectable_label(matches!(self.current_tab, UserTab::Favorites), "Favorites").clicked() {
-                self.current_tab = UserTab::Favorites;
+            match self.page_state {
+                PageState::Create | PageState::Creating => {
+                },
+                _ => {
+                    if ui.selectable_label(matches!(self.current_tab, UserTab::Followers), "Followers").clicked() {
+                        self.current_tab = UserTab::Followers;
+                    }
+                    if ui.selectable_label(matches!(self.current_tab, UserTab::Favorites), "Favorites").clicked() {
+                        self.current_tab = UserTab::Favorites;
+                    }
+                }
             }
         });
         match self.current_tab {
             UserTab::Details => {
-                ui.add_enabled_ui(self.page_state.is_initial(), |ui| {
+                ui.add_enabled_ui(self.page_state.is_enabled(), |ui| {
                     ui_user(ui, &mut self.user);
                 });
             },
@@ -259,10 +222,25 @@ impl Page for UserEdit {
         if let Ok(msg) = self.event_bus.try_recv() {
             match msg {
                 UIResult::Updated(_) => {
-                    self.page_state = PageState::Final;
+                    self.page_state = PageState::Show;
+                    self.orig_user = self.user.to_model();
+                },
+                UIResult::Created => {
+                    self.page_state = PageState::Show;
+                    self.orig_user = self.user.to_model();
                 },
                 UIResult::DbError(msg) => {
-                    self.page_state = PageState::Initial;
+                    match self.page_state {
+                        PageState::Updating => {
+                            self.page_state = PageState::Update;
+                        },
+                        PageState::Creating => {
+                            self.page_state = PageState::Create;
+                        },
+                        _ => {
+
+                        }
+                    }
                     emit(PageAction::AddError(msg));
                 },
                 _ => {
@@ -284,7 +262,19 @@ impl UserEdit {
             orig_user,
             current_tab: UserTab::Details,
             event_bus: UIBus::default(),
-            page_state: PageState::Initial,
+            page_state: PageState::Show,
+        }
+    }
+
+    pub fn new_create(user: UserUI) -> Self {
+        Self {
+            user_followers_tab: UserFollowersTab::new(user.id),
+            user_favorites_tab: UserFavoritesTab::new(user.id),
+            orig_user: user.to_model(),
+            user,
+            current_tab: UserTab::Details,
+            event_bus: UIBus::default(),
+            page_state: PageState::Create,
         }
     }
 
