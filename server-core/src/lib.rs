@@ -16,6 +16,8 @@ use models::entity::{article_favorites, articles, tags, comments, article_tags, 
 use sea_orm::{ActiveValue, InsertResult, JoinType, prelude::*};
 use command_bus::ResponseChannel;
 
+pub mod token;
+
 struct DBApi<'a> {
     db: &'a DatabaseConnection
 }
