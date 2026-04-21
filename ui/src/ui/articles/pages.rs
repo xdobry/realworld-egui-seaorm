@@ -14,6 +14,7 @@ use crate::ui::core::tables::{TableAction, TableMode};
 pub struct ArticleTable {
     articles: Vec<articles::Model>,
     event_bus: UIBus,
+    should_close: bool,
 }
 
 impl Page for ArticleTable {
@@ -27,7 +28,7 @@ impl Page for ArticleTable {
                 page_action = PageAction::AddPage(Box::new(ArticleNew::new(ArticleUI::new())));
             }
             if ui.button("Close").clicked() {
-                page_action = PageAction::Close;
+                self.should_close = true;
             }
         });
         let table_action = show_articles_table(ui, &self.articles, TableMode::EditDelete);
@@ -81,6 +82,9 @@ impl Page for ArticleTable {
     fn as_any(&self) -> &dyn Any {
         self
     }
+    fn should_close(&self) -> bool {
+        self.should_close
+    }
 }
 
 impl ArticleTable {
@@ -88,6 +92,7 @@ impl ArticleTable {
         Self {
             articles: Vec::new(),
             event_bus: UIBus::default(),
+            should_close: false,
         }
     }
 }
@@ -115,6 +120,7 @@ pub struct ArticleNew {
     article_form: ArticleForm,
     page_state: PageState,
     event_bus: UIBus,
+    should_close: bool,
 }
 
 impl Page for ArticleNew {
@@ -136,7 +142,7 @@ impl Page for ArticleNew {
                 }
             }
             if ui.button("Close").clicked() {
-                page_action = PageAction::Close;
+                self.should_close = true;
             }
         });
         ui.add_enabled_ui(self.page_state.is_initial(), |ui| {
@@ -150,6 +156,9 @@ impl Page for ArticleNew {
     }
     fn as_any(&self) -> &dyn Any {
         self
+    }
+    fn should_close(&self) -> bool {
+        self.should_close
     }
     fn update(&mut self, tx: &mut CommandBus,emit: &mut dyn FnMut(PageAction)) {
         if let Ok(msg) = self.event_bus.try_recv() {
@@ -175,6 +184,7 @@ impl ArticleNew {
             article_form: ArticleForm::new(article),
             page_state: PageState::Initial,
             event_bus: UIBus::default(),
+            should_close: false,
         }
     }
 }
@@ -195,6 +205,7 @@ pub struct ArticleEdit {
     article_favorites_tab: ArticleFavoriteTab,
     article_comments_tab: ArticleCommentsTab,
     event_bus: UIBus,
+    should_close: bool,
 }
 
 impl Page for ArticleEdit {
@@ -216,7 +227,7 @@ impl Page for ArticleEdit {
                 }
             }
             if ui.button("Close").clicked() {
-                page_action = PageAction::Close;
+                self.should_close = true;
             }
         });
         ui.horizontal(|ui| {
@@ -258,6 +269,9 @@ impl Page for ArticleEdit {
     fn as_any(&self) -> &dyn Any {
         self
     }
+    fn should_close(&self) -> bool {
+        self.should_close
+    }
     fn update(&mut self, tx: &mut CommandBus,emit: &mut dyn FnMut(PageAction)) {
         if let Ok(msg) = self.event_bus.try_recv() {
             match msg {
@@ -289,6 +303,7 @@ impl ArticleEdit {
             orig_article: orig_article,
             page_state: PageState::Initial,
             event_bus: UIBus::default(),
+            should_close: false,
         }
     }
 

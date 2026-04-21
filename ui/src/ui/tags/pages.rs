@@ -13,6 +13,7 @@ use command_bus::{CommandBus, UIBus};
 pub struct TagTable {
     tags: Vec<tags::Model>,
     event_bus: UIBus,
+    should_close: bool,
 }
 
 impl Page for TagTable {
@@ -31,7 +32,7 @@ impl Page for TagTable {
                 page_action = PageAction::AddPage(Box::new(TagNew::new(tag_ui)));
             }
             if ui.button("Close").clicked() {
-                page_action = PageAction::Close;
+                self.should_close = true;
             }
         });
         let table_action = show_tags_table(ui, &self.tags, TableMode::EditDelete);
@@ -73,6 +74,9 @@ impl Page for TagTable {
     fn as_any(&self) -> &dyn Any {
         self
     }
+    fn should_close(&self) -> bool {
+        self.should_close
+    }
     fn init(&mut self, tx: &mut CommandBus) {
         self.event_bus.send_task(tx, UICommand::Tag(TagCommand::Reload));
     }
@@ -83,6 +87,7 @@ impl TagTable {
         Self {
             tags: Vec::new(),
             event_bus: UIBus::default(),
+            should_close: false,
         }
     }
 }
@@ -110,6 +115,7 @@ pub struct TagNew {
     tag: TagUI,
     page_state: PageState,
     event_bus: UIBus,
+    should_close: bool,
 }
 
 impl Page for TagNew {
@@ -131,7 +137,7 @@ impl Page for TagNew {
                 }
             }
             if ui.button("Close").clicked() {
-                page_action = PageAction::Close;
+                self.should_close = true;
             }
         });
         ui.add_enabled_ui(self.page_state.is_initial(), |ui| {
@@ -145,6 +151,9 @@ impl Page for TagNew {
     }
     fn as_any(&self) -> &dyn Any {
         self
+    }
+    fn should_close(&self) -> bool {
+        self.should_close
     }
     fn update(&mut self, _tx: &mut CommandBus,emit: &mut dyn FnMut(PageAction)) {
         if let Ok(msg) = self.event_bus.try_recv() {
@@ -169,6 +178,7 @@ impl TagNew {
             tag,
             page_state: PageState::Initial,
             event_bus: UIBus::default(),
+            should_close: false,
         }
     }
 }
@@ -178,6 +188,7 @@ pub struct TagEdit {
     orig_tag: tags::Model,
     page_state: PageState,
     event_bus: UIBus,
+    should_close: bool,
 }
 
 impl Page for TagEdit {
@@ -199,7 +210,7 @@ impl Page for TagEdit {
                 }
             }
             if ui.button("Close").clicked() {
-                page_action = PageAction::Close;
+                self.should_close = true;
             }
         });
         ui.add_enabled_ui(self.page_state.is_initial(), |ui| {
@@ -212,6 +223,9 @@ impl Page for TagEdit {
     }
     fn as_any(&self) -> &dyn Any {
         self
+    }
+    fn should_close(&self) -> bool {
+        self.should_close
     }
     fn update(&mut self, _tx: &mut CommandBus,emit: &mut dyn FnMut(PageAction)) {
         if let Ok(msg) = self.event_bus.try_recv() {
@@ -237,6 +251,7 @@ impl TagEdit {
             orig_tag,
             event_bus: UIBus::default(),
             page_state: PageState::Initial,
+            should_close: false,
         }
     }
 

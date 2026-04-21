@@ -17,6 +17,8 @@ use models::Uuid;
 pub struct UserTable {
     users: Vec<users::Model>,
     event_bus: UIBus,
+    should_close: bool,
+
 }
 
 impl Page for UserTable {
@@ -37,7 +39,7 @@ impl Page for UserTable {
                 page_action = PageAction::AddPage(Box::new(UserEdit::new_create(new_user)));
             }
             if ui.button("Close").clicked() {
-                page_action = PageAction::Close;
+                self.should_close = true;
             }
         });
         let table_action = show_users_table(ui, &self.users, TableMode::EditDelete);
@@ -88,6 +90,9 @@ impl Page for UserTable {
     fn as_any(&self) -> &dyn Any {
         self
     }
+    fn should_close(&self) -> bool {
+        self.should_close
+    }
     fn init(&mut self, tx: &mut CommandBus) {
         self.event_bus.send_task(tx, UICommand::User(UserCommand::Reload));
     }
@@ -98,6 +103,7 @@ impl UserTable {
         Self {
             users: Vec::new(),
             event_bus: UIBus::default(),
+            should_close: false,
         }
     }
 }
@@ -138,6 +144,7 @@ pub struct UserEdit {
     page_state: PageState,
     current_tab: UserTab,
     event_bus: UIBus,
+    should_close: bool,
 }
 
 impl Page for UserEdit {
@@ -177,7 +184,7 @@ impl Page for UserEdit {
                 }
             }
             if ui.button("Close").clicked() {
-                page_action = PageAction::Close;
+                self.should_close = true;
             }
         });
         ui.horizontal(|ui| {
@@ -217,6 +224,9 @@ impl Page for UserEdit {
     }
     fn as_any(&self) -> &dyn Any {
         self
+    }
+    fn should_close(&self) -> bool {
+        self.should_close
     }
     fn update(&mut self, tx: &mut CommandBus,emit: &mut dyn FnMut(PageAction)) {
         if let Ok(msg) = self.event_bus.try_recv() {
@@ -263,6 +273,7 @@ impl UserEdit {
             current_tab: UserTab::Details,
             event_bus: UIBus::default(),
             page_state: PageState::Show,
+            should_close: false,
         }
     }
 
@@ -275,6 +286,7 @@ impl UserEdit {
             current_tab: UserTab::Details,
             event_bus: UIBus::default(),
             page_state: PageState::Create,
+            should_close: false,
         }
     }
 

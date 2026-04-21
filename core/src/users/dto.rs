@@ -58,12 +58,17 @@ pub struct LoginUser {
     pub password: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LoginResponse {
-    pub user_id: Uuid,
-    pub user_name: String,
-    pub is_admin: bool,
-    pub token: String,
+    pub user_context: UserContext,
+    pub token: Vec<u8>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct UserContext {
+    pub user_id: Uuid,
+    pub user_name: String,
+    pub user_email: String,
+    pub is_admin: bool,
+}
 

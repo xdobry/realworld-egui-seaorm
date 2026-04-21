@@ -3,7 +3,7 @@
 //! Checkout the `README.md` for guidance.
 
 use std::{
-    fs, io::{self}, net::{SocketAddr, ToSocketAddrs}, path::PathBuf, sync::Arc, thread
+    fs, io::{self}, net::{SocketAddr, ToSocketAddrs}, path::PathBuf, sync::{Arc, RwLock}, thread
 };
 
 use anyhow::{Result, anyhow};
@@ -66,6 +66,7 @@ fn main() -> Result<(), eframe::Error> {
         options,
         Box::new(|cc| {
             let egui_context = cc.egui_ctx.clone();
+            let shared_context: ui::app::SharedContext =  Arc::new(RwLock::new(None));
             
             thread::spawn(move || {
                 let rt = Runtime::new().unwrap();
@@ -80,7 +81,7 @@ fn main() -> Result<(), eframe::Error> {
 
             let command_bus = CommandBus::new(command_tx);
 
-            Ok(Box::new(FormsApp::new(cc.storage, command_bus)))
+            Ok(Box::new(FormsApp::new(cc.storage, command_bus, shared_context)))
         }),
     )
     

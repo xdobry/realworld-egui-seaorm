@@ -11,8 +11,9 @@ use core::comments::api::{CommentCommand, CommentResult};
 use core::comments::dto::{CommentArticle, CommentAuthor};
 use core::tags::api::{TagCommand, TagResult};
 use core::users::api::{UserCommand, UserResult};
+use core::users::dto::{LoginResponse, UserContext};
 use models::entity::{article_favorites, articles, tags, comments, article_tags, user_follows, users};
-use sea_orm::{InsertResult, JoinType, prelude::*};
+use sea_orm::{ActiveValue, InsertResult, JoinType, prelude::*};
 use command_bus::ResponseChannel;
 
 struct DBApi<'a> {
@@ -86,7 +87,7 @@ impl api::Api for DBApi<'_> {
 }
 
 
-pub async fn handle_ui_command(cmd: UICommand, result_tx: &mut ResponseChannel, db: &DatabaseConnection) -> Result<(), sea_orm::DbErr> {
+pub async fn handle_ui_command<T: CallContext>(cmd: UICommand, result_tx: &mut ResponseChannel, db: &DatabaseConnection, call_context: &T) -> Result<(), sea_orm::DbErr> {
     let db_api = DBApi { db };
     match cmd {
         UICommand::Article(article_command) => {
@@ -239,19 +240,44 @@ pub async fn handle_ui_command(cmd: UICommand, result_tx: &mut ResponseChannel, 
                     let user = users::Entity::find_by_id(uuid).one(db).await?;
                     if let Some(user) = user {
                         result_tx.send(UIResult::User(UserResult::User(user)));
+                    } else {
+                        result_tx.send(UIResult::DbError("user not found".into()));
                     }
                 },
                 UserCommand::Delete(id) => {
-                    let _d = users::Entity::delete_by_id(id).exec(db).await?;
-                    result_tx.send(UIResult::Deleted(id));
+                    if call_context.is_admin() {
+                        let _d = users::Entity::delete_by_id(id).exec(db).await?;
+                        result_tx.send(UIResult::Deleted(id));
+                    } else {
+                        result_tx.send(UIResult::DbError("need admin".into()))
+                    }
                 },
                 UserCommand::Update(user) => {
                     let id = user.key; 
-                    let _update_res = users::Entity::update::<users::ActiveModel>(user.to_active_model::<users::Entity>()).validate()?.exec(db).await?;
+                    let mut user_model = user.to_active_model::<users::Entity>();
+                    if let Some(password) = user_model.password_hash.take() {
+                       user_model.password_hash = ActiveValue::Set(call_context.encode_password(password.as_str()));
+                    }
+                    let _update_res = users::Entity::update::<users::ActiveModel>(user_model).validate()?.exec(db).await?;
                     result_tx.send(UIResult::Updated(id));
                 },
-                UserCommand::Login(_login_request) => {
-                    result_tx.send(UIResult::User(UserResult::LoginFailed("not implemented".into())));
+                UserCommand::Login(login_request) => {
+                    let user = users::Entity::find().filter(users::Column::Email.eq(login_request.email)).one(db).await?;
+                    if let Some(user) = user {
+                        if call_context.verify_password(&login_request.password, &user.password_hash) {
+                            result_tx.send(UIResult::User(UserResult::Login(LoginResponse {
+                                user_context: UserContext {
+                                    user_id: user.id,
+                                    is_admin: true,
+                                    user_name: user.username,
+                                    user_email: user.email,
+                                },
+                                token: "".into()
+                            })));
+                            return Ok(());
+                        }
+                    }
+                    result_tx.send(UIResult::User(UserResult::LoginFailed("user not found or password wrong".into())));
                 }
             }
         }
@@ -312,4 +338,11 @@ pub async fn handle_ui_command(cmd: UICommand, result_tx: &mut ResponseChannel, 
 
     }
     Ok(())
+}
+
+pub trait CallContext {
+    fn is_admin(&self) -> bool;
+    fn user_id(&self) -> Option<Uuid>;
+    fn encode_password(&self, password: &str) -> String;
+    fn verify_password(&self, password: &str, hash: &str) -> bool;
 }

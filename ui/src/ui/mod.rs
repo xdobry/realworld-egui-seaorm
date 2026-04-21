@@ -7,4 +7,5 @@ pub mod article_tags;
 pub mod comments;
 pub mod article_favorites;
 pub mod user_follows;
+pub mod login;
 

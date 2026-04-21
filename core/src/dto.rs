@@ -1,7 +1,7 @@
-use chrono::{FixedOffset, DateTime, NaiveDateTime};
 use serde::{Serialize, Deserialize};
 use sea_orm::{Iterable, entity::prelude::*, sea_query::ValueTuple};
-use time::OffsetDateTime;
+use sea_orm::prelude::TimeDateTimeWithTimeZone;
+use models::DateTimeWithTimeZone;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ChangeRecord {
@@ -18,7 +18,8 @@ pub struct FieldValue {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DbValue {
     String(String),
-    TimeDateTimeWithTimeZone(OffsetDateTime),
+    TimeDateTimeWithTimeZone(TimeDateTimeWithTimeZone),
+    ChronoDateTimeWithTimeZone(DateTimeWithTimeZone),
     Uuid(uuid::Uuid),
     Null,
 }
@@ -108,8 +109,18 @@ impl From<Value> for DbValue {
                     }
                 }
             }
+            Value::ChronoDateTimeWithTimeZone(v) => {
+                match v {
+                    Some(v) => {
+                        DbValue::ChronoDateTimeWithTimeZone(v)
+                    }
+                    None => {
+                        DbValue::Null
+                    }
+                }
+            }
             _ => {
-                panic!("unsupported Value type TODO");
+                panic!("unsupported Value type {:?}",value);
             }
         }
     }
@@ -127,6 +138,9 @@ impl From<&DbValue> for Value {
             }
             DbValue::TimeDateTimeWithTimeZone(v) => {
                 Value::TimeDateTimeWithTimeZone(Some(*v))
+            }
+            DbValue::ChronoDateTimeWithTimeZone(v) => {
+                Value::ChronoDateTimeWithTimeZone(Some(*v))
             }
             DbValue::Null => {
                 panic!("can not be null")

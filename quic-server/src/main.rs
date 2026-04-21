@@ -9,12 +9,14 @@ use std::{
 mod common;
 
 use anyhow::{Context, Result, bail};
-use app_core::api::{UICommand, UIResult};
+use app_core::{api::{UICommand, UIResult}, users::dto::UserContext};
+use argon2::Config;
 use clap::Parser;
 use dotenvy::dotenv;
 use proto::crypto::rustls::QuicServerConfig;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer, pem::PemObject};
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
+use server_core::CallContext;
 use tokio::sync::mpsc;
 use tracing::{error, info, info_span};
 use tracing_futures::Instrument as _;
@@ -138,7 +140,7 @@ async fn run(options: Opt) -> Result<()> {
     let database_url = env::var("DATABASE_URL")
         .expect("DATABASE_URL must be set");
 
-    let mut opt = ConnectOptions::new("postgres://realworld:realworld@localhost/realworld");
+    let mut opt = ConnectOptions::new(database_url);
     opt.max_connections(10)
         .min_connections(2)
         .connect_timeout(Duration::from_secs(10))
@@ -147,6 +149,7 @@ async fn run(options: Opt) -> Result<()> {
 
     let db = Database::connect(opt).await?;
     let db = Arc::new(db);
+    let server_context = Arc::new(ServerContext::new());
 
     while let Some(conn) = endpoint.accept().await {
         if options
@@ -163,7 +166,7 @@ async fn run(options: Opt) -> Result<()> {
             conn.retry().unwrap();
         } else {
             info!("accepting connection");
-            let fut = handle_connection(conn, db.clone());
+            let fut = handle_connection(conn, db.clone(), server_context.clone());
             tokio::spawn(async move {
                 if let Err(e) = fut.await {
                     error!("connection failed: {reason}", reason = e.to_string())
@@ -175,7 +178,7 @@ async fn run(options: Opt) -> Result<()> {
     Ok(())
 }
 
-async fn handle_connection(conn: quinn::Incoming, db: Arc<DatabaseConnection>) -> Result<()> {
+async fn handle_connection(conn: quinn::Incoming, db: Arc<DatabaseConnection>, server_context: Arc<ServerContext>) -> Result<()> {
     let connection = conn.await?;
     let span = info_span!(
         "connection",
@@ -205,7 +208,7 @@ async fn handle_connection(conn: quinn::Incoming, db: Arc<DatabaseConnection>) -
                 }
                 Ok(s) => s,
             };
-            let fut = handle_messages(stream, db.clone());
+            let fut = handle_messages(stream, db.clone(), server_context.clone());
             tokio::spawn(
                 async move {
                     if let Err(e) = fut.await {
@@ -222,14 +225,18 @@ async fn handle_connection(conn: quinn::Incoming, db: Arc<DatabaseConnection>) -
 }
 
 async fn handle_messages(
-    (mut send, mut recv): (quinn::SendStream, quinn::RecvStream), db: Arc<DatabaseConnection>
+    (mut send, mut recv): (quinn::SendStream, quinn::RecvStream), db: Arc<DatabaseConnection>, server_context: Arc<ServerContext>
 ) -> Result<()> {
     let msg = read_message(&mut recv).await?;
     let cmd: UICommand = postcard::from_bytes(&msg)?;
     // println!("got command {:?}",cmd);
     let (result_tx, mut result_rx) = mpsc::channel::<UIResult>(1);
     let mut response_channel = ResponseChannel::new(result_tx);
-    server_core::handle_ui_command(cmd, &mut response_channel, &db).await?;
+    let call_context = MyCallContext {
+        server_context: server_context,
+        user_context: None,
+    };
+    server_core::handle_ui_command(cmd, &mut response_channel, &db, &call_context).await?;
     if let Some(result) = result_rx.recv().await {
         // println!("result {:?}", result);
         let out_msg = postcard::to_stdvec(&result)?;
@@ -278,4 +285,48 @@ pub async fn read_message(
     stream.read_exact(&mut buffer).await?;
 
     Ok(buffer)
+}
+
+struct ServerContext {
+    password_salt: String,
+}
+
+impl ServerContext {
+    fn new() -> Self {
+        ServerContext { 
+            password_salt: env::var("PASSWORD_SALT").expect("PASSWORD_SALT must be set"),
+        }
+    }
+}
+
+struct MyCallContext {
+    server_context: Arc<ServerContext>,
+    user_context: Option<UserContext>,
+}
+
+impl CallContext for MyCallContext {
+    fn is_admin(&self) -> bool {
+        if let Some(user_context) = &self.user_context {
+            return user_context.is_admin;
+        }
+        false
+    }
+
+    fn user_id(&self) -> Option<sea_orm::prelude::Uuid> {
+        if let Some(user_context) = &self.user_context {
+            return Some(user_context.user_id);
+        }
+        None
+    }
+
+    fn encode_password(&self, password: &str) -> String {
+        let password_bytes = password.as_bytes();
+        let argo_config = argon2::Config::default();
+        let hashed_password = argon2::hash_encoded(password_bytes, self.server_context.password_salt.as_bytes(), &argo_config).unwrap();
+        hashed_password
+    }
+
+    fn verify_password(&self, attempted_password: &str, hash: &str) -> bool {
+        argon2::verify_encoded(hash, attempted_password.as_bytes()).unwrap()
+    }
 }

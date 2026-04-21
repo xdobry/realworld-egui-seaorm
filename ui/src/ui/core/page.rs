@@ -13,26 +13,24 @@ pub trait Page: Any {
     }
     fn init(&mut self, _tx: &mut CommandBus)  {
     }
-    fn should_close(&self) -> bool {
-        false
-    }
+    fn should_close(&self) -> bool;
 }
 
 
 
 
 pub struct DbError {
-    pub msg: String
+    pub msg: String,
+    should_close: bool,
 }
 
 impl Page for DbError {
     fn show(&mut self, ui: &mut egui::Ui, _tx: &mut CommandBus) -> PageAction {
-        let mut page_action = PageAction::None;
         if ui.button("Close").clicked() {
-            page_action = PageAction::Close;
+            self.should_close = true;
         }
         ui.label(self.msg.as_str());
-        page_action
+        PageAction::None
     }
     fn title(&self) -> &str {
         "Error"
@@ -40,19 +38,22 @@ impl Page for DbError {
     fn as_any(&self) -> &dyn Any {
         self
     }
+    fn should_close(&self) -> bool {
+        self.should_close
+    }
 }
 
 impl DbError {
     pub fn new(msg: String) -> Self {
         Self {
-            msg
+            msg,
+            should_close: false,
         }
     }
 }
 
 
 pub enum PageAction {
-    Close,
     AddPage(Box<dyn Page>),
     AddError(String),
     None,

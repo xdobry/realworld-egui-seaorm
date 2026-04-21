@@ -1,5 +1,5 @@
 use std::sync::mpsc;
-
+use std::sync::{Arc, RwLock};
 use wasm_bindgen_futures::wasm_bindgen::JsCast;
 use app_core::api::UIResult;
 use command_bus::{CommandBus, ResponseChannel, UITask};
@@ -38,6 +38,7 @@ fn main() {
                     let egui_context = cc.egui_ctx.clone();
                     let (command_tx, command_rx) = mpsc::channel::<UITask>();
                     let mut command_bus = CommandBus::new(command_tx);
+                    let shared_context: ui::app::SharedContext =  Arc::new(RwLock::new(None));
                     let mut pending_requests = Vec::new();
                     let client = reqwest::Client::new();
 
@@ -85,7 +86,7 @@ fn main() {
                         }
                     }));
 
-                    Ok(Box::new(FormsApp::new(cc.storage, command_bus)))
+                    Ok(Box::new(FormsApp::new(cc.storage, command_bus, shared_context)))
                 })
                 ,
             )
