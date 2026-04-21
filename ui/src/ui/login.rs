@@ -9,6 +9,7 @@ pub struct LoginForm {
     pub password: String,
     pub msg: Option<String>,
     event_bus: UIBus,
+    first_frame: bool,
 }
 
 pub enum LoginAction {
@@ -28,28 +29,46 @@ impl LoginForm {
                 ui.heading("Login");
                 ui.add_space(10.0);
                 ui.label("Email");
-                ui.text_edit_singleline(&mut self.email);
+                let email_id = ui.make_persistent_id("login_email");
+                let email_response = ui.add(
+                    egui::TextEdit::singleline(&mut self.email)
+                        .id(email_id)
+                        .hint_text("Email"),
+                );
+                if self.first_frame {
+                    email_response.request_focus();
+                    self.first_frame = false;
+                }
                 ui.label("Password");
-                ui.add(
+                let password_response = ui.add(
                 egui::TextEdit::singleline(&mut self.password)
                         .password(true)
                         .hint_text("Enter password")
                 );
+                let mut process_login = false;
+                if password_response.lost_focus()
+                    && ui.input(|i| i.key_pressed(egui::Key::Enter))
+                {
+                    process_login = true;
+                }
                 if let Some(msg) = &self.msg {
                     ui.strong(msg);
                 }
                 ui.add_space(40.0);
                 ui.horizontal(|ui| {
                     if ui.button("Login").clicked() {
-                        self.event_bus.send_task(tx, UICommand::User(UserCommand::Login(LoginUser {
-                            email: self.email.clone(),
-                            password: self.password.clone(),
-                        })));
+                        process_login = true;
                     }
                     if ui.button("Cancel").clicked() {
                         login_action = LoginAction::Cancel;
                     }
                 });
+                if process_login {
+                    self.event_bus.send_task(tx, UICommand::User(UserCommand::Login(LoginUser {
+                        email: self.email.clone(),
+                        password: self.password.clone(),
+                    })));
+                }
             });
         });
         if let Ok(msg) = self.event_bus.try_recv() {
@@ -77,6 +96,7 @@ impl LoginForm {
             password: "".into(),
             event_bus: UIBus::default(),
             msg: None,
+            first_frame: true,
         } 
     }
 }

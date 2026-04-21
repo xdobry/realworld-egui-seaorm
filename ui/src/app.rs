@@ -92,6 +92,8 @@ impl eframe::App for FormsApp {
                         ui.label(&user_context.user_context.user_name);
                         if ui.button("Log out").clicked() {
                             self.user_context = None;
+                            let mut ctx = self.shared_context.write().unwrap();
+                            *ctx = None;
                         }
                     } else {
                         if ui.button("Login").clicked() {

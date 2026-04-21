@@ -267,14 +267,16 @@ pub async fn handle_ui_command<T: CallContext>(cmd: UICommand, result_tx: &mut R
                     let user = users::Entity::find().filter(users::Column::Email.eq(login_request.email)).one(db).await?;
                     if let Some(user) = user {
                         if call_context.verify_password(&login_request.password, &user.password_hash) {
-                            result_tx.send(UIResult::User(UserResult::Login(LoginResponse {
-                                user_context: UserContext {
+                            let user_context = UserContext {
                                     user_id: user.id,
                                     is_admin: true,
                                     user_name: user.username,
                                     user_email: user.email,
-                                },
-                                token: "".into()
+                            };
+                            let token = call_context.create_token(&user_context);
+                            result_tx.send(UIResult::User(UserResult::Login(LoginResponse {
+                                user_context: user_context,
+                                token: token,
                             })));
                             return Ok(());
                         }

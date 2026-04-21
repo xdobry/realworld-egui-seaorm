@@ -41,16 +41,32 @@ fn main() {
                     let shared_context: ui::app::SharedContext =  Arc::new(RwLock::new(None));
                     let mut pending_requests = Vec::new();
                     let client = reqwest::Client::new();
+                    let shared_context_clone = shared_context.clone();
 
                     command_bus.update_call = Some(Box::new(move || {
                         if let Ok(task) = command_rx.try_recv() {
                             let client = client.clone();
+                            let shared_context_clone = shared_context_clone.clone();
+                            egui_context.request_repaint();
+                            let egui_context = egui_context.clone();
                             let promise = Promise::spawn_local(async move {
                                 let out_msg = postcard::to_stdvec(&task.command).unwrap();
-                                let request = client.post("http://localhost:8081/uicmd")
-                                    .header("Content", "application/octet-stream")
-                                    .body(out_msg);
-                                match request.send().await {
+                                let token = shared_context_clone.read().unwrap().as_ref().map(|c| c.token.clone());
+                                // TODO take url from current page or config
+                                let url = "http://localhost:8081/uicmd";
+                                let request = match token {
+                                    Some(token) => {
+                                        client.post(url)
+                                        .header("Content", "application/octet-stream")
+                                        .header("Authorization", String::from_utf8(token).unwrap())
+                                    },
+                                    None => client.post(url)
+                                        .header("Content", "application/octet-stream"),
+                                };
+                                let request = request.body(out_msg);
+                                let request_result = request.send().await;
+                                egui_context.request_repaint();
+                                match request_result {
                                     Ok(resp) => {
                                         if resp.status().is_success() {
                                             if let Ok(bytes) = resp.bytes().await {
@@ -81,7 +97,6 @@ fn main() {
                         for mut item in ready {
                             if let Ok(result) = item.poll_promise.try_take() {
                                 item.response_channel.send(result);
-                                egui_context.request_repaint();
                             }
                         }
                     }));

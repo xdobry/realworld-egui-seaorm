@@ -28,8 +28,18 @@ Run 2 processes. Open 2 terminals
    ```sh
    cargo run -p quic-server
 
-   cargo run -p quic-client
+   cargo run -p quic-client http://localhost:4433
    ```
+
+If you have problems with connection try also
+
+   ```sh
+   cargo run -p quic-server --listen 127.0.0.1:4433
+
+   cargo run -p quic-client http://localhost:4433
+   ```
+
+
 
 ## Start wasm client (in browser) and web server (HTTP server)
 
@@ -57,6 +67,7 @@ In prod mode you should build using trunk
    ```sh
    cd web-client
    trunk build --release
+   cd ..
    cargo run -p web-server
    ```
 

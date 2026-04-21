@@ -30,7 +30,7 @@ pub enum UIResult {
     Deleted(Uuid),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TokenClaims {
     pub user_id: Uuid,
     pub is_admin: bool,

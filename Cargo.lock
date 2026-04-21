@@ -6707,10 +6707,12 @@ name = "web-server"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "base64",
  "command-bus",
  "core",
  "dotenvy",
  "postcard",
+ "rust-argon2",
  "sea-orm",
  "server-core",
  "tokio",
