@@ -347,4 +347,5 @@ pub trait CallContext {
     fn user_id(&self) -> Option<Uuid>;
     fn encode_password(&self, password: &str) -> String;
     fn verify_password(&self, password: &str, hash: &str) -> bool;
+    fn create_token(&self, user_context: &UserContext) -> Vec<u8>;
 }

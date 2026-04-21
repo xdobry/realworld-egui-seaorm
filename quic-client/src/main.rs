@@ -7,7 +7,7 @@ use std::{
 };
 
 use anyhow::{Result, anyhow};
-use app_core::{api::UIResult};
+use app_core::api::{RemoteMessage, UIResult};
 use clap::Parser;
 use command_bus::{CommandBus, UITask};
 use egui::{Context, ViewportBuilder};
@@ -15,7 +15,7 @@ use proto::crypto::rustls::QuicClientConfig;
 use rustls::pki_types::CertificateDer;
 use tokio::{runtime::Runtime, sync::mpsc};
 use tracing::{error, info};
-use ui::app::FormsApp;
+use ui::app::{FormsApp, SharedContext};
 use url::Url;
 
 mod common;
@@ -66,13 +66,14 @@ fn main() -> Result<(), eframe::Error> {
         options,
         Box::new(|cc| {
             let egui_context = cc.egui_ctx.clone();
-            let shared_context: ui::app::SharedContext =  Arc::new(RwLock::new(None));
+            let shared_context: SharedContext =  Arc::new(RwLock::new(None));
+            let shared_context_clone = shared_context.clone();
             
             thread::spawn(move || {
                 let rt = Runtime::new().unwrap();
                 rt.block_on(async move {
                     // Example async task
-                    let r = run(opt, &mut command_rx, egui_context).await;
+                    let r = run(opt, &mut command_rx, egui_context, shared_context_clone).await;
                     if let Err(e) = r {
                         println!("error {:?}",e);
                     }
@@ -87,7 +88,7 @@ fn main() -> Result<(), eframe::Error> {
     
 }
 
-async fn run(options: Opt, commands: &mut mpsc::Receiver<UITask>, egui_context: Context) -> Result<()> {
+async fn run(options: Opt, commands: &mut mpsc::Receiver<UITask>, egui_context: Context, shared_context: SharedContext) -> Result<()> {
     let url = options.url;
     let url_host = strip_ipv6_brackets(url.host_str().unwrap());
     let remote = (url_host, url.port().unwrap_or(4433))
@@ -137,7 +138,11 @@ async fn run(options: Opt, commands: &mut mpsc::Receiver<UITask>, egui_context: 
     loop {
         let task = commands.recv().await;
         if let Some(mut task) = task {
-            let out_msg = postcard::to_stdvec(&task.command)?;
+            let remote_msg = RemoteMessage { 
+                token: shared_context.read().unwrap().as_ref().map(|c| c.token.clone()),
+                command: task.command,
+            };
+            let out_msg = postcard::to_stdvec(&remote_msg)?;
             let (mut send, mut recv) = conn
                 .open_bi()
                 .await

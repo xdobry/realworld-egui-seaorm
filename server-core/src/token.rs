@@ -39,7 +39,7 @@ pub fn verify_token(token: &[u8], secret: &[u8]) -> Option<Vec<u8>> {
     Some(payload.to_vec())
 }
 
-fn load_secret(hex_key: &str) -> Vec<u8> {
+pub fn load_secret(hex_key: &str) -> Vec<u8> {
     let key = hex::decode(hex_key).expect("invalid hex key");
     assert!(
         key.len() >= 32,

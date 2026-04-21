@@ -9,8 +9,8 @@ use std::{
 mod common;
 
 use anyhow::{Context, Result, bail};
-use app_core::{api::{UICommand, UIResult}, users::dto::UserContext};
-use argon2::Config;
+use app_core::{api::{RemoteMessage, TokenClaims, UIResult}, users::dto::UserContext};
+use server_core::token::{expiration_time, is_token_expired, load_secret, sign_payload, verify_token};
 use clap::Parser;
 use dotenvy::dotenv;
 use proto::crypto::rustls::QuicServerConfig;
@@ -228,15 +228,33 @@ async fn handle_messages(
     (mut send, mut recv): (quinn::SendStream, quinn::RecvStream), db: Arc<DatabaseConnection>, server_context: Arc<ServerContext>
 ) -> Result<()> {
     let msg = read_message(&mut recv).await?;
-    let cmd: UICommand = postcard::from_bytes(&msg)?;
+    let remote_msg: RemoteMessage = postcard::from_bytes(&msg)?;
     // println!("got command {:?}",cmd);
     let (result_tx, mut result_rx) = mpsc::channel::<UIResult>(1);
     let mut response_channel = ResponseChannel::new(result_tx);
+    let token_claims = if let Some(token) = remote_msg.token {
+        // TODO handle invalid token, expired, or can not be deserialized
+        let token_payload = verify_token(&token, &server_context.token_secret);
+        if let Some(token_payload) = token_payload {
+            let claims: TokenClaims = postcard::from_bytes(&token_payload)?;
+            if is_token_expired(claims.exp) {
+                // Token Expired
+                None
+            } else {
+                Some(claims)
+            }
+        } else {
+            // Token not valid
+            None
+        }
+    } else {
+        None
+    };
     let call_context = MyCallContext {
         server_context: server_context,
-        user_context: None,
+        token_claims: token_claims,
     };
-    server_core::handle_ui_command(cmd, &mut response_channel, &db, &call_context).await?;
+    server_core::handle_ui_command(remote_msg.command, &mut response_channel, &db, &call_context).await?;
     if let Some(result) = result_rx.recv().await {
         // println!("result {:?}", result);
         let out_msg = postcard::to_stdvec(&result)?;
@@ -289,32 +307,34 @@ pub async fn read_message(
 
 struct ServerContext {
     password_salt: String,
+    token_secret: Vec<u8>,
 }
 
 impl ServerContext {
     fn new() -> Self {
         ServerContext { 
             password_salt: env::var("PASSWORD_SALT").expect("PASSWORD_SALT must be set"),
+            token_secret: load_secret(env::var("TOKEN_SECRET").expect("TOKEN_SECRET must be set").as_str()),
         }
     }
 }
 
 struct MyCallContext {
     server_context: Arc<ServerContext>,
-    user_context: Option<UserContext>,
+    token_claims: Option<TokenClaims>,
 }
 
 impl CallContext for MyCallContext {
     fn is_admin(&self) -> bool {
-        if let Some(user_context) = &self.user_context {
-            return user_context.is_admin;
+        if let Some(token_claims) = &self.token_claims {
+            return token_claims.is_admin;
         }
         false
     }
 
     fn user_id(&self) -> Option<sea_orm::prelude::Uuid> {
-        if let Some(user_context) = &self.user_context {
-            return Some(user_context.user_id);
+        if let Some(token_claims) = &self.token_claims {
+            return Some(token_claims.user_id);
         }
         None
     }
@@ -329,4 +349,16 @@ impl CallContext for MyCallContext {
     fn verify_password(&self, attempted_password: &str, hash: &str) -> bool {
         argon2::verify_encoded(hash, attempted_password.as_bytes()).unwrap()
     }
+    
+    fn create_token(&self, user_context: &UserContext) -> Vec<u8> {
+        let token_claim = TokenClaims {
+            user_id: user_context.user_id,
+            is_admin: user_context.is_admin,
+            exp: expiration_time(360)
+        };
+        let payload = postcard::to_stdvec(&token_claim).unwrap();
+        sign_payload(&payload, &self.server_context.token_secret)
+    }
+
+    
 }

@@ -29,3 +29,17 @@ pub enum UIResult {
     Updated(Uuid),
     Deleted(Uuid),
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TokenClaims {
+    pub user_id: Uuid,
+    pub is_admin: bool,
+    pub exp: u64,
+}
+
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RemoteMessage {
+    pub token: Option<Vec<u8>>,
+    pub command: UICommand,
+}

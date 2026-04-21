@@ -104,4 +104,9 @@ impl CallContext for MyCallContext<'_> {
     fn verify_password(&self, attempted_password: &str, hash: &str) -> bool {
         argon2::verify_encoded(hash, attempted_password.as_bytes()).unwrap()
     }
+    
+    fn create_token(&self, _user_context: &core::users::dto::UserContext) -> Vec<u8> {
+        // fat client does not need a real token, here only dummy implementation
+        vec![]
+    }
 }
