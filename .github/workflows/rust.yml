@@ -16,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+    - name: Update rust
+      run: rustup update stable 
     - name: Build 
       run: cargo build --workspace --exclude web-client
     - name: Test 
