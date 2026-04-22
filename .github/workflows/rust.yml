@@ -1,0 +1,26 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build 
+      run: cargo build --workspace --exclude web-client
+    - name: Test 
+      run: cargo test --workspace --exclude web-client
+    - name: Install wasm target
+      run: rustup target add wasm32-unknown-unknown
+    - name: Build wasm
+      run: cargo build --target wasm32-unknown-unknown -p web-client

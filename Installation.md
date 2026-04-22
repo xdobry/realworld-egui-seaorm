@@ -43,7 +43,7 @@ If you have problems with connection try also
 
 ## Start wasm client (in browser) and web server (HTTP server)
 
-You need to install wasn2 target and trunk
+You need to install wasm32 target and trunk
 
    ```sh
    rustup target add wasm32-unknown-unknown
