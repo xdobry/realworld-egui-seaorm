@@ -235,7 +235,11 @@ pub async fn handle_ui_command<T: CallContext>(cmd: UICommand, result_tx: &mut R
                     result_tx.send(UIResult::User(UserResult::Users(users)));
                 },
                 UserCommand::Create(user) => {
-                    let _insert_res: InsertResult<users::ActiveModel> = users::Entity::insert(user.into()).exec(db).await?;
+                    let mut user_model: users::ActiveModel = user.into();
+                    if let Some(password) = user_model.password_hash.take() {
+                       user_model.password_hash = ActiveValue::Set(call_context.encode_password(password.as_str()));
+                    }
+                    let _insert_res: InsertResult<users::ActiveModel> = users::Entity::insert(user_model).exec(db).await?;
                     result_tx.send(UIResult::Created);
                 },
                 UserCommand::Load(uuid) => {

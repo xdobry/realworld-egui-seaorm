@@ -31,7 +31,7 @@ pub struct ArticleTagsTab {
 }
 
 impl Form for ArticleTagsTab {
-    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus) {
+    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, _page_action: &mut PageAction) {
         if !self.initialized {
             self.event_bus.send_task(tx,UICommand::ArticleTag(ArticleTagCommand::LoadByArticleId(self.article_id)));
             self.initialized = true;
@@ -145,7 +145,7 @@ pub struct ArticleFavoriteTab {
 }
 
 impl Form for ArticleFavoriteTab {
-    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus) {
+    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, page_action: &mut PageAction) {
         if !self.initialized {
             self.event_bus.send_task(tx,UICommand::ArticleFavorite(ArticleFavoriteCommand::LoadByArticleId(self.article_id)));
             self.initialized = true;
@@ -163,7 +163,7 @@ impl Form for ArticleFavoriteTab {
                     self.event_bus.send_task(tx,UICommand::ArticleFavorite(ArticleFavoriteCommand::Delete(ids)));
                 },
                 TableAction::LinkItem(user_id) => {
-                    self.event_bus.send_task(tx,UICommand::User(UserCommand::Load(user_id)));
+                    *page_action = PageAction::Navigate(core::entities::EntityIdent::User(user_id));
                 }
                 _ => {
                     
@@ -224,9 +224,6 @@ impl Form for ArticleFavoriteTab {
                 UIResult::User(UserResult::Users(users)) => {
                     self.users = Some(users);
                 },
-                UIResult::User(UserResult::User(user)) => {
-                    emit(PageAction::AddPage(Box::new(UserEdit::new(user))));
-                },
                 UIResult::Created => {
                     self.initialized = false;
                 },
@@ -265,7 +262,7 @@ pub struct ArticleCommentsTab {
 }
 
 impl Form for ArticleCommentsTab {
-    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus) {
+    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, page_action: &mut PageAction) {
         if !self.initialized {
             self.event_bus.send_task(tx,UICommand::Comment(CommentCommand::LoadByArticleId(self.article_id)));
             self.initialized = true;
@@ -305,7 +302,7 @@ impl Form for ArticleCommentsTab {
             if let Some((comment_form, comment_orig)) = self.comment_form.as_mut() {
                 let modal = Modal::new(Id::new("mod_add_tag")).show(ui.ctx(), |ui| {
                     ui.set_width(350.0);
-                    comment_form.show_ui(ui, tx);
+                    comment_form.show_ui(ui, tx, page_action);
                     egui::Sides::new().show(
                         ui,
                         |_ui| {},

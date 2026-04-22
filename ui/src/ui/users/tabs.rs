@@ -24,7 +24,7 @@ pub struct UserFollowersTab {
 }
 
 impl Form for UserFollowersTab {
-    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus) {
+    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, _page_action: &mut PageAction) {
         if !self.initialized {
             self.event_bus.send_task(tx,UICommand::UserFollower(UserFollowerCommand::LoadByFolloweeId(self.user_id)));
             self.initialized = true;
@@ -137,7 +137,7 @@ pub struct UserFavoritesTab {
 }
 
 impl Form for UserFavoritesTab {
-    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus) {
+    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, _page_action: &mut PageAction) {
         if !self.initialized {
             self.event_bus.send_task(tx,UICommand::ArticleFavorite(ArticleFavoriteCommand::LoadByUserId(self.user_id)));
             self.initialized = true;

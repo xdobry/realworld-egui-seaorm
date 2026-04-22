@@ -1,3 +1,4 @@
+use core::entities::EntityIdent;
 use std::any::Any;
 
 use core::api::{UICommand, UIResult};
@@ -45,7 +46,7 @@ impl Page for UserTable {
         let table_action = show_users_table(ui, &self.users, TableMode::EditDelete);
         match table_action {
             TableAction::SelectItem(user_id, _label) => {
-                self.event_bus.send_task(tx, UICommand::User(UserCommand::Load(user_id)));
+                page_action = PageAction::Navigate(EntityIdent::User(user_id));
             }
             TableAction::DeleteItem(user_id) => {
                 self.event_bus.send_task(tx, UICommand::User(UserCommand::Delete(user_id)));
@@ -61,9 +62,6 @@ impl Page for UserTable {
             match msg {
                 UIResult::User(user_result) => {
                     match user_result {
-                        UserResult::User(user) => {
-                            emit(PageAction::AddPage(Box::new(UserEdit::new(user))));
-                        }
                         UserResult::Users(users) => {
                             self.users = users;
                         },
@@ -115,6 +113,7 @@ pub enum PageState {
     Final,
     Create,
     Creating,
+    Loading,
 }
 
 impl PageState {
@@ -137,8 +136,9 @@ pub enum UserTab {
 }
 
 pub struct UserEdit {
-    user: UserUI,
-    orig_user: users::Model,
+    ident: EntityIdent,
+    user: Option<UserUI>,
+    orig_user: Option<users::Model>,
     user_followers_tab: UserFollowersTab,
     user_favorites_tab: UserFavoritesTab,
     page_state: PageState,
@@ -148,15 +148,27 @@ pub struct UserEdit {
 }
 
 impl Page for UserEdit {
+    fn init(&mut self, tx: &mut CommandBus) {
+        if self.user.is_none() {
+            if let EntityIdent::User(user_id) = self.ident {
+                self.event_bus.send_task(tx,UICommand::User(UserCommand::Load(user_id)));
+                self.page_state = PageState::Loading;
+            }
+        }
+    }
     fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus) -> PageAction {
         let mut page_action = PageAction::None;
         ui.horizontal(|ui| {
             match self.page_state {
                 PageState::Update => {
                     if ui.button("Update").clicked() {
-                        self.user.updated_at = core::time_now();
-                        self.event_bus.send_task(tx,UICommand::User(UserCommand::Update(self.user.to_change_record(&self.orig_user))));
-                        self.page_state = PageState::Updating;
+                        if let Some(user) = self.user.as_mut() {
+                            user.updated_at = core::time_now();
+                            if let Some(orig_user) = &self.orig_user {
+                                self.event_bus.send_task(tx,UICommand::User(UserCommand::Update(user.to_change_record(orig_user))));
+                                self.page_state = PageState::Updating;
+                            }
+                        }
                     }
                     if ui.button("Cancel").clicked() {
                         self.page_state = PageState::Show;
@@ -178,43 +190,50 @@ impl Page for UserEdit {
                 },
                 PageState::Create => {
                      if ui.button("Create").clicked() {
-                        self.event_bus.send_task(tx,UICommand::User(UserCommand::Create(self.user.to_model())));
-                        self.page_state = PageState::Creating;
+                        if let Some(user) = &self.user {
+                            self.event_bus.send_task(tx,UICommand::User(UserCommand::Create(user.to_model())));
+                            self.page_state = PageState::Creating;
+                        }
                     }
+                },
+                PageState::Loading => {
+                    ui.label("Loading...");
                 }
             }
             if ui.button("Close").clicked() {
                 self.should_close = true;
             }
         });
-        ui.horizontal(|ui| {
-            if ui.selectable_label(matches!(self.current_tab, UserTab::Details), "Details").clicked() {
-                self.current_tab = UserTab::Details;
-            }
-            match self.page_state {
-                PageState::Create | PageState::Creating => {
-                },
-                _ => {
-                    if ui.selectable_label(matches!(self.current_tab, UserTab::Followers), "Followers").clicked() {
-                        self.current_tab = UserTab::Followers;
-                    }
-                    if ui.selectable_label(matches!(self.current_tab, UserTab::Favorites), "Favorites").clicked() {
-                        self.current_tab = UserTab::Favorites;
+        if let Some(user) = self.user.as_mut() {
+            ui.horizontal(|ui| {
+                if ui.selectable_label(matches!(self.current_tab, UserTab::Details), "Details").clicked() {
+                    self.current_tab = UserTab::Details;
+                }
+                match self.page_state {
+                    PageState::Create | PageState::Creating => {
+                    },
+                    _ => {
+                        if ui.selectable_label(matches!(self.current_tab, UserTab::Followers), "Followers").clicked() {
+                            self.current_tab = UserTab::Followers;
+                        }
+                        if ui.selectable_label(matches!(self.current_tab, UserTab::Favorites), "Favorites").clicked() {
+                            self.current_tab = UserTab::Favorites;
+                        }
                     }
                 }
-            }
-        });
-        match self.current_tab {
-            UserTab::Details => {
-                ui.add_enabled_ui(self.page_state.is_enabled(), |ui| {
-                    ui_user(ui, &mut self.user);
-                });
-            },
-            UserTab::Followers => {
-                self.user_followers_tab.show_ui(ui, tx);
-            },
-            UserTab::Favorites => {
-                self.user_favorites_tab.show_ui(ui, tx);
+            });
+            match self.current_tab {
+                UserTab::Details => {
+                    ui.add_enabled_ui(self.page_state.is_enabled(), |ui| {
+                        ui_user(ui, user);
+                    });
+                },
+                UserTab::Followers => {
+                    self.user_followers_tab.show_ui(ui, tx, &mut page_action);
+                },
+                UserTab::Favorites => {
+                    self.user_favorites_tab.show_ui(ui, tx, &mut page_action);
+                }
             }
         }
         page_action
@@ -233,11 +252,20 @@ impl Page for UserEdit {
             match msg {
                 UIResult::Updated(_) => {
                     self.page_state = PageState::Show;
-                    self.orig_user = self.user.to_model();
+                    if let Some(user) = &self.user {
+                        self.orig_user = Some(user.to_model());
+                    }
                 },
                 UIResult::Created => {
                     self.page_state = PageState::Show;
-                    self.orig_user = self.user.to_model();
+                    if let Some(user) = &self.user {
+                        self.orig_user = Some(user.to_model());
+                    }
+                },
+                UIResult::User(UserResult::User(user)) => {
+                    self.user = Some(UserUI::from_model(&user));
+                    self.orig_user = Some(user);
+                    self.page_state = PageState::Show;
                 },
                 UIResult::DbError(msg) => {
                     match self.page_state {
@@ -261,28 +289,33 @@ impl Page for UserEdit {
         self.user_followers_tab.update(tx, &mut *emit);
         self.user_favorites_tab.update(tx, &mut *emit);
     }
+    fn entity_ident(&self) -> EntityIdent {
+        self.ident.clone()
+    }
 }
 
 impl UserEdit {
-    pub fn new(orig_user: users::Model) -> Self {
+    pub fn new(user_id: Uuid) -> Self {
         Self {
-            user: UserUI::from_model(&orig_user),
-            user_followers_tab: UserFollowersTab::new(orig_user.id),
-            user_favorites_tab: UserFavoritesTab::new(orig_user.id),
-            orig_user,
+            ident: EntityIdent::User(user_id),
+            user: None,
+            user_followers_tab: UserFollowersTab::new(user_id),
+            user_favorites_tab: UserFavoritesTab::new(user_id),
+            orig_user: None,
             current_tab: UserTab::Details,
             event_bus: UIBus::default(),
-            page_state: PageState::Show,
+            page_state: PageState::Loading,
             should_close: false,
         }
     }
 
     pub fn new_create(user: UserUI) -> Self {
         Self {
+            ident: EntityIdent::User(user.id),
             user_followers_tab: UserFollowersTab::new(user.id),
             user_favorites_tab: UserFavoritesTab::new(user.id),
-            orig_user: user.to_model(),
-            user,
+            orig_user: Some(user.to_model()),
+            user: Some(user),
             current_tab: UserTab::Details,
             event_bus: UIBus::default(),
             page_state: PageState::Create,

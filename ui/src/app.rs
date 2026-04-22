@@ -3,7 +3,7 @@ use egui::{Align, Layout, global_theme_preference_switch};
 use models::Uuid;
 use command_bus::CommandBus;
 use crate::ui::{articles::pages::{ArticleNew, ArticleTable}, core::page::{DbError, Page, PageAction}, login::{LoginAction, LoginForm}, tags::pages::{TagNew, TagTable}, users::pages::{UserEdit, UserTable}};
-use core::{articles::dto::ArticleUI, users::dto::LoginResponse};
+use core::{articles::dto::ArticleUI, entities::EntityIdent, users::dto::LoginResponse};
 use core::tags::dto::TagUI;
 use core::users::dto::UserUI;
 use std::sync::{Arc, RwLock};
@@ -218,6 +218,30 @@ impl FormsApp {
             PageAction::AddError(msg) => {
                 self.pages.push(Box::new(DbError::new(msg)));
                 self.selected_page = Some(self.pages.len()-1);
+            },
+            PageAction::Navigate(entity_ident) => {
+                let pos = self.pages.iter().position(|p| p.entity_ident()==entity_ident);
+                if let Some(pos) = pos {
+                    self.selected_page = Some(pos);
+                } else {
+                    match entity_ident {
+                        EntityIdent::Article(uuid) => {
+
+                        }
+                        EntityIdent::Comment(uuid) => {
+
+                        }
+                        EntityIdent::Tag(uuid) => {
+
+                        }
+                        EntityIdent::User(uuid) => {
+                            self.add_page(UserEdit::new(uuid));
+                        },
+                        EntityIdent::None => {
+
+                        }
+                    }
+                }
             },
             _ => {
             }

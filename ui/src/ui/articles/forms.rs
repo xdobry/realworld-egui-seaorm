@@ -21,7 +21,7 @@ pub struct ArticleForm {
 }
 
 impl Form for ArticleForm {
-    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus) {
+    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, _page_action: &mut PageAction) {
         ui.label("uuid");
         ui.label(self.article.id.to_string());
         ui.label("slug");

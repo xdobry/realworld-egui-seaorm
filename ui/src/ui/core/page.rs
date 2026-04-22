@@ -1,4 +1,5 @@
 
+use core::entities::EntityIdent;
 use std::any::Any;
 
 use command_bus::CommandBus;
@@ -8,12 +9,14 @@ pub trait Page: Any {
     fn title(&self) -> &str;
     fn as_any(&self) -> &dyn Any;
     fn update(&mut self, _tx: &mut CommandBus,_emit: &mut dyn FnMut(PageAction)) 
-    {
-        
+    {        
     }
     fn init(&mut self, _tx: &mut CommandBus)  {
     }
     fn should_close(&self) -> bool;
+    fn entity_ident(&self) -> EntityIdent {
+        EntityIdent::None
+    }
 }
 
 
@@ -56,11 +59,12 @@ impl DbError {
 pub enum PageAction {
     AddPage(Box<dyn Page>),
     AddError(String),
+    Navigate(EntityIdent),
     None,
 }
 
 pub trait Form {
-    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus);
+    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, page_action: &mut PageAction);
     fn update<F>(&mut self, _tx: &mut CommandBus, mut _emit: F) 
     where 
         F: FnMut(PageAction),

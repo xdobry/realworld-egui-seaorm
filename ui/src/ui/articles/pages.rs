@@ -146,7 +146,7 @@ impl Page for ArticleNew {
             }
         });
         ui.add_enabled_ui(self.page_state.is_initial(), |ui| {
-            self.article_form.show_ui(ui, tx);
+            self.article_form.show_ui(ui, tx, &mut page_action);
         });
         page_action
 
@@ -248,17 +248,17 @@ impl Page for ArticleEdit {
         match self.current_tab {
             ArticleTab::Details => {
                 ui.add_enabled_ui(self.page_state.is_initial(), |ui| {
-                    self.article_form.show_ui(ui, tx);
+                    self.article_form.show_ui(ui, tx, &mut page_action);
                 });
             }
             ArticleTab::Tags => {
-                self.article_tags_tab.show_ui(ui, tx);
+                self.article_tags_tab.show_ui(ui, tx, &mut page_action);
             }
             ArticleTab::Favorites => {
-                self.article_favorites_tab.show_ui(ui, tx);
+                self.article_favorites_tab.show_ui(ui, tx, &mut page_action);
             }
             ArticleTab::Comments => {
-                self.article_comments_tab.show_ui(ui, tx);
+                self.article_comments_tab.show_ui(ui, tx, &mut page_action);
             }
         }
         page_action

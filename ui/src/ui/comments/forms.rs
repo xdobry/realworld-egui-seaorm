@@ -17,7 +17,7 @@ pub struct CommentForm {
 }
 
 impl Form for CommentForm {
-    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus) {
+    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, _page_action: &mut PageAction) {
         ui.label("body");
         ui.text_edit_multiline(&mut self.comment.body);
         ui.label("author id");
