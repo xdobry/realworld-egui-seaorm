@@ -7,7 +7,7 @@ use core::users::dto::UserUI;
 use command_bus::{CommandBus, UIBus};
 use crate::ui::users::forms::ui_user;
 use crate::ui::users::tables::show_users_table;
-use crate::ui::core::page::{Page, PageAction};
+use crate::ui::core::page::{Page, PageAction, PageState};
 use crate::ui::core::tables::{TableAction, TableMode};
 use crate::ui::users::tabs::{UserFavoritesTab, UserFollowersTab};
 use crate::ui::core::page::Form;
@@ -19,7 +19,6 @@ pub struct UserTable {
     users: Vec<users::Model>,
     event_bus: UIBus,
     should_close: bool,
-
 }
 
 impl Page for UserTable {
@@ -30,14 +29,7 @@ impl Page for UserTable {
                 self.event_bus.send_task(tx, UICommand::User(UserCommand::Reload));
             }
             if ui.button("Create User").clicked() {
-                let now = core::time_now();
-                let new_user = UserUI {
-                    id: Uuid::new_v4(),
-                    created_at: now,
-                    updated_at: now,
-                    ..Default::default()
-                };               
-                page_action = PageAction::AddPage(Box::new(UserEdit::new_create(new_user)));
+                page_action = PageAction::AddPage(Box::new(UserEdit::new_create()));
             }
             if ui.button("Close").clicked() {
                 self.should_close = true;
@@ -102,29 +94,6 @@ impl UserTable {
             users: Vec::new(),
             event_bus: UIBus::default(),
             should_close: false,
-        }
-    }
-}
-
-pub enum PageState {
-    Show,
-    Update,
-    Updating,
-    Final,
-    Create,
-    Creating,
-    Loading,
-}
-
-impl PageState {
-    pub fn is_enabled(&self) -> bool {
-        match self {
-            PageState::Update | PageState::Create => {
-                true
-            }
-            _ => {
-                false
-            }
         }
     }
 }
@@ -309,7 +278,8 @@ impl UserEdit {
         }
     }
 
-    pub fn new_create(user: UserUI) -> Self {
+    pub fn new_create() -> Self {
+        let user = UserUI::new_create();
         Self {
             ident: EntityIdent::User(user.id),
             user_followers_tab: UserFollowersTab::new(user.id),

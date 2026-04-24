@@ -1,11 +1,9 @@
 use eframe::Storage;
 use egui::{Align, Layout, global_theme_preference_switch};
-use models::Uuid;
 use command_bus::CommandBus;
-use crate::ui::{articles::pages::{ArticleNew, ArticleTable}, core::page::{DbError, Page, PageAction}, login::{LoginAction, LoginForm}, tags::pages::{TagNew, TagTable}, users::pages::{UserEdit, UserTable}};
+use crate::ui::{articles::pages::{ArticleEdit, ArticleTable}, core::page::{DbError, Page, PageAction}, login::{LoginAction, LoginForm}, tags::pages::{TagEdit, TagTable}, users::pages::{UserEdit, UserTable}};
 use core::{articles::dto::ArticleUI, entities::EntityIdent, users::dto::LoginResponse};
 use core::tags::dto::TagUI;
-use core::users::dto::UserUI;
 use std::sync::{Arc, RwLock};
 
 pub type SharedContext = Arc<RwLock<Option<LoginResponse>>>;
@@ -88,22 +86,24 @@ impl eframe::App for FormsApp {
         } else {
             egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
                 ui.horizontal(|ui| {
-                    if let Some(user_context) = &self.user_context {
-                        ui.label(&user_context.user_context.user_name);
-                        if ui.button("Log out").clicked() {
-                            self.user_context = None;
-                            let mut ctx = self.shared_context.write().unwrap();
-                            *ctx = None;
-                        }
-                    } else {
-                        if ui.button("Login").clicked() {
-                            self.login_form = Some(LoginForm::new());
-                        }
-                    }
+                    global_theme_preference_switch(ui);
                     if ui.button("Help").clicked() {
                         self.about_window = true;
                     }
-                    global_theme_preference_switch(ui);
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        if let Some(user_context) = &self.user_context {
+                            ui.label(&user_context.user_context.user_name);
+                            if ui.button("Log out").clicked() {
+                                self.user_context = None;
+                                let mut ctx = self.shared_context.write().unwrap();
+                                *ctx = None;
+                            }
+                        } else {
+                            if ui.button("Login").clicked() {
+                                self.login_form = Some(LoginForm::new());
+                            }
+                        }
+                    });
                 });
             });           
             egui::SidePanel::left("left_panel")
@@ -117,9 +117,7 @@ impl eframe::App for FormsApp {
                             }
                         }                  
                         if resp.clicked_by(egui::PointerButton::Secondary) {
-                            if !self.switch_to_page::<ArticleNew>() {
-                                self.add_page(ArticleNew::new(ArticleUI::new()));
-                            }
+                            self.add_page(ArticleEdit::new_create(ArticleUI::new()));
                         }
                         let resp = ui.button("Users");
                         if resp.clicked() {
@@ -130,12 +128,7 @@ impl eframe::App for FormsApp {
                         if resp.clicked_by(egui::PointerButton::Secondary) {
                             if !self.switch_to_page::<UserEdit>() {
                                 let now = core::time_now();
-                                self.add_page(UserEdit::new_create(UserUI {
-                                    id: Uuid::new_v4(),
-                                    created_at: now,
-                                    updated_at: now,
-                                    ..Default::default()
-                                }));
+                                self.add_page(UserEdit::new_create());
                             }
                         }
                         let resp = ui.button("Tags");
@@ -145,14 +138,8 @@ impl eframe::App for FormsApp {
                             }
                         }                  
                         if resp.clicked_by(egui::PointerButton::Secondary) {
-                            if !self.switch_to_page::<TagNew>() {
-                                let now = core::time_now();
-                                self.add_page(TagNew::new(TagUI {
-                                    id: core::new_uuid(),
-                                    created_at: now,
-                                    ..Default::default()
-                                }));
-                            }
+                            let now = core::time_now();
+                            self.add_page(TagEdit::new_create(TagUI::new()));
                         }
                     });
             });
@@ -226,16 +213,16 @@ impl FormsApp {
                 } else {
                     match entity_ident {
                         EntityIdent::Article(uuid) => {
-
-                        }
-                        EntityIdent::Comment(uuid) => {
-
+                            self.add_page(ArticleEdit::new(uuid));
                         }
                         EntityIdent::Tag(uuid) => {
-
+                            self.add_page(TagEdit::new(uuid));
                         }
                         EntityIdent::User(uuid) => {
                             self.add_page(UserEdit::new(uuid));
+                        },
+                        EntityIdent::Comment(_uuid) => {
+                            // Where is no standalone comment page
                         },
                         EntityIdent::None => {
 

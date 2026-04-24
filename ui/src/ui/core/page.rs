@@ -74,3 +74,26 @@ pub trait Form {
     fn init(&mut self, _tx: &mut CommandBus)  {
     }
 }
+
+pub enum PageState {
+    Show,
+    Update,
+    Updating,
+    Final,
+    Create,
+    Creating,
+    Loading,
+}
+
+impl PageState {
+    pub fn is_enabled(&self) -> bool {
+        match self {
+            PageState::Update | PageState::Create => {
+                true
+            }
+            _ => {
+                false
+            }
+        }
+    }
+}

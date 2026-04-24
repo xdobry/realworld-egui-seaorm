@@ -50,6 +50,8 @@ This results in an architecture similar to the Elm pattern, where the UI communi
 The desktop UI uses Tokio for async communication with the database or a QUIC server.
 The WASM UI cannot use Tokio, so it uses poll-promise.
 A command bus abstraction hides these differences and provides a unified interface.
+* Stateless Servers
+* HMAC signed token for authentication and authorization. 
 * Binary message protocol:
 Messages are serialized into a compact binary format using postcard and serde.
 The web server exposes a single endpoint for all UI messages/commands. This is not RESTful; WebSocket or WebTransport would likely be a better fit.

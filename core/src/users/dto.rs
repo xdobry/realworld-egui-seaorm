@@ -50,6 +50,16 @@ impl UserUI {
         ChangeRecord::from_models::<Entity>(&self.to_model(), orig)
     }
 
+    pub fn new_create() -> Self {
+        let now = crate::time_now();
+        Self {
+            id: Uuid::new_v4(),
+            created_at: now,
+            updated_at: now,
+            ..Default::default()
+        }
+    }
+
 }
 
 #[derive(Serialize, Deserialize, Debug)]

@@ -1,8 +1,7 @@
-use sea_orm::Iterable;
 use sea_orm::{prelude::DateTimeWithTimeZone};
 use sea_orm::entity::prelude::*;
 use serde::{Serialize, Deserialize};
-use models::entity::tags::{ActiveModel, Entity, Column, Model};
+use models::entity::tags::{Entity, Model};
 
 use crate::dto::{ChangeRecord};
 
@@ -32,6 +31,15 @@ impl TagUI {
 
     pub fn to_change_record(&self, orig: &Model) -> ChangeRecord {
         ChangeRecord::from_models::<Entity>(&self.to_model(), orig)
+    }
+
+    pub fn new () -> Self {
+        let now = crate::time_now();
+        Self {
+            id: crate::new_uuid(),
+            created_at: now,
+            ..Default::default()
+        }
     }
 
 }

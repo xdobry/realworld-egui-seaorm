@@ -1,7 +1,7 @@
-use sea_orm::{ActiveModelTrait, FromQueryResult, Iterable, prelude::DateTimeWithTimeZone};
+use sea_orm::{FromQueryResult, prelude::DateTimeWithTimeZone};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
-use models::entity::{articles::ActiveModel, articles::Entity, articles::{Column, Model}};
+use models::entity::{articles::Entity, articles::Model};
 
 use crate::dto::{ChangeRecord};
 

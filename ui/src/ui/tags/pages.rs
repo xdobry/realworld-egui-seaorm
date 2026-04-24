@@ -1,12 +1,14 @@
+use core::entities::EntityIdent;
 use std::any::Any;
 
+use models::Uuid;
 use models::entity::tags;
 use core::api::{UICommand, UIResult};
 use core::tags::api::{TagCommand, TagResult};
 use core::tags::dto::TagUI;
 use crate::ui::tags::forms::ui_tag;
 use crate::ui::tags::tables::show_tags_table;
-use crate::ui::core::page::{Page, PageAction};
+use crate::ui::core::page::{Page, PageAction, PageState};
 use crate::ui::core::tables::{TableAction, TableMode};
 use command_bus::{CommandBus, UIBus};
 
@@ -24,12 +26,7 @@ impl Page for TagTable {
                 self.event_bus.send_task(tx, UICommand::Tag(TagCommand::Reload));
             }
             if ui.button("Create Tag").clicked() {
-                let tag_ui = TagUI {
-                    id: core::new_uuid(),
-                    created_at: core::time_now(),
-                    ..Default::default()
-                };
-                page_action = PageAction::AddPage(Box::new(TagNew::new(tag_ui)));
+                page_action = PageAction::AddPage(Box::new(TagEdit::new_create(TagUI::new())));
             }
             if ui.button("Close").clicked() {
                 self.should_close = true;
@@ -38,7 +35,7 @@ impl Page for TagTable {
         let table_action = show_tags_table(ui, &self.tags, TableMode::EditDelete);
         match table_action {
             TableAction::SelectItem(tag_id, _label) => {
-                self.event_bus.send_task(tx, UICommand::Tag(TagCommand::Load(tag_id)));
+                page_action = PageAction::Navigate(EntityIdent::Tag(tag_id));
             }
             _ => {
 
@@ -49,15 +46,8 @@ impl Page for TagTable {
     fn update(&mut self, _tx: &mut CommandBus,emit: &mut dyn FnMut(PageAction)) {
         if let Ok(msg) = self.event_bus.try_recv() {
             match msg {
-                UIResult::Tag(tag_result) => {
-                    match tag_result {
-                        TagResult::Tag(tag) => {
-                            emit(PageAction::AddPage(Box::new(TagEdit::new(tag))));
-                        },
-                        TagResult::Tags(tags) => {
-                            self.tags = tags;
-                        },
-                    }
+                UIResult::Tag(TagResult::Tags(tags)) => {
+                    self.tags = tags;
                 }
                 UIResult::DbError(msg) => {
                     emit(PageAction::AddError(msg));
@@ -92,130 +82,73 @@ impl TagTable {
     }
 }
 
-pub enum PageState {
-    Initial,
-    Running,
-    Final,
-}
-
-impl PageState {
-    pub fn is_initial(&self) -> bool {
-        match self {
-            PageState::Initial => {
-                true
-            }
-            _ => {
-                false
-            }
-        }
-    }
-}
-
-pub struct TagNew {
-    tag: TagUI,
-    page_state: PageState,
-    event_bus: UIBus,
-    should_close: bool,
-}
-
-impl Page for TagNew {
-    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus) -> PageAction {
-        let mut page_action = PageAction::None;
-        ui.horizontal(|ui| {
-            match self.page_state {
-                PageState::Initial => {
-                    if ui.button("Create").clicked() {
-                        self.event_bus.send_task(tx, UICommand::Tag(TagCommand::Create(self.tag.to_model())));
-                        self.page_state = PageState::Running;
-                    }
-                },
-                PageState::Running => {
-                    ui.label("Creating");
-                }
-                PageState::Final => {
-                    ui.label("Created");
-                }
-            }
-            if ui.button("Close").clicked() {
-                self.should_close = true;
-            }
-        });
-        ui.add_enabled_ui(self.page_state.is_initial(), |ui| {
-            ui_tag(ui, &mut self.tag);
-        });
-        page_action
-
-    }
-    fn title(&self) -> &str {
-        "New Tag"
-    }
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-    fn should_close(&self) -> bool {
-        self.should_close
-    }
-    fn update(&mut self, _tx: &mut CommandBus,emit: &mut dyn FnMut(PageAction)) {
-        if let Ok(msg) = self.event_bus.try_recv() {
-            match msg {
-                UIResult::Created => {
-                    self.page_state = PageState::Final;
-                },
-                UIResult::DbError(msg) => {
-                    emit(PageAction::AddError(msg));
-                },
-                _ => {
-
-                }
-            }
-        }
-    }
-}
-
-impl TagNew {
-    pub fn new(tag: TagUI) -> Self {       
-        Self {
-            tag,
-            page_state: PageState::Initial,
-            event_bus: UIBus::default(),
-            should_close: false,
-        }
-    }
-}
-
 pub struct TagEdit {
-    tag: TagUI,
-    orig_tag: tags::Model,
+    ident: EntityIdent,
+    tag: Option<TagUI>,
+    orig_tag: Option<tags::Model>,
     page_state: PageState,
     event_bus: UIBus,
     should_close: bool,
 }
 
 impl Page for TagEdit {
+    fn init(&mut self, tx: &mut CommandBus) {
+        if self.tag.is_none() {
+            if let EntityIdent::Tag(tag_id) = self.ident {
+                self.event_bus.send_task(tx,UICommand::Tag(TagCommand::Load(tag_id)));
+                self.page_state = PageState::Loading;
+            }
+        }
+    }    
     fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus) -> PageAction {
         let mut page_action = PageAction::None;
-        ui.horizontal(|ui| {
-            match self.page_state {
-                PageState::Initial => {
-                    if ui.button("Update").clicked() {
-                        let _ = self.event_bus.send_task(tx, UICommand::Tag(TagCommand::Update(self.tag.to_change_record(&self.orig_tag))));
-                        self.page_state = PageState::Running;
+        if self.tag.is_none() {
+            ui.label("Loading...");
+            return page_action;
+        }
+        if let Some(tag) = self.tag.as_mut() {
+            ui.horizontal(|ui| {
+                match self.page_state {
+                    PageState::Update => {
+                        if ui.button("Update").clicked() {
+                            if let Some(orig_tag) = &self.orig_tag {
+                                let _ = self.event_bus.send_task(tx, UICommand::Tag(TagCommand::Update(tag.to_change_record(orig_tag))));
+                                self.page_state = PageState::Updating;
+                            }
+                        }
+                    },
+                    PageState::Loading => {
+                        ui.label("Loading...");
                     }
-                },
-                PageState::Running => {
-                    ui.label("Updating");
+                    PageState::Show => {
+                        if ui.button("Start Updating").clicked() {
+                            self.page_state = PageState::Update;
+                        }
+                    }
+                    PageState::Create => {
+                        if ui.button("Create").clicked() {
+                            let _ = self.event_bus.send_task(tx, UICommand::Tag(TagCommand::Create(tag.to_model())));
+                            self.page_state = PageState::Updating;
+                        }
+                    },
+                    PageState::Updating => {
+                        ui.label("Updating");
+                    }
+                    PageState::Creating => {
+                        ui.label("Creating");
+                    }
+                    PageState::Final => {
+                        ui.label("Updated");
+                    }
                 }
-                PageState::Final => {
-                    ui.label("Updated");
+                if ui.button("Close").clicked() {
+                    self.should_close = true;
                 }
-            }
-            if ui.button("Close").clicked() {
-                self.should_close = true;
-            }
-        });
-        ui.add_enabled_ui(self.page_state.is_initial(), |ui| {
-            ui_tag(ui, &mut self.tag);
-        });
+            });
+            ui.add_enabled_ui(self.page_state.is_enabled(), |ui| {
+                ui_tag(ui, tag);
+            });
+        }
         page_action
     }
     fn title(&self) -> &str {
@@ -231,10 +164,24 @@ impl Page for TagEdit {
         if let Ok(msg) = self.event_bus.try_recv() {
             match msg {
                 UIResult::Updated(_) => {
-                    self.page_state = PageState::Final;
+                    if let Some(tag) = &self.tag {
+                        self.orig_tag = Some(tag.to_model());
+                        self.page_state = PageState::Show;
+                    }
+                },
+                UIResult::Created => {
+                    if let Some(tag) = &self.tag {
+                        self.orig_tag = Some(tag.to_model());
+                        self.page_state = PageState::Show;
+                    }
                 },
                 UIResult::DbError(msg) => {
                     emit(PageAction::AddError(msg));
+                },
+                UIResult::Tag(TagResult::Tag(tag)) => {
+                    self.tag = Some(TagUI::from_model(&tag));
+                    self.orig_tag = Some(tag);
+                    self.page_state = PageState::Show;
                 },
                 _ => {
 
@@ -245,12 +192,23 @@ impl Page for TagEdit {
 }
 
 impl TagEdit {
-    pub fn new(orig_tag: tags::Model) -> Self {
+    pub fn new(tag_id: Uuid) -> Self {
         Self {
-            tag: TagUI::from_model(&orig_tag),
-            orig_tag,
+            ident: EntityIdent::Tag(tag_id),
+            tag: None,
+            orig_tag: None,
             event_bus: UIBus::default(),
-            page_state: PageState::Initial,
+            page_state: PageState::Show,
+            should_close: false,
+        }
+    }
+    pub fn new_create(tag: TagUI) -> Self {
+        Self {
+            ident: EntityIdent::Tag(tag.id),
+            orig_tag: Some(tag.to_model()),
+            tag: Some(tag),
+            event_bus: UIBus::default(),
+            page_state: PageState::Create,
             should_close: false,
         }
     }

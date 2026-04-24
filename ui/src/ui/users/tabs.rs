@@ -10,7 +10,7 @@ use models::entity::user_follows;
 use models::{DateTimeWithTimeZone, Uuid};
 use models::entity::article_favorites;
 
-use crate::ui::{article_favorites::tables::show_user_favorites_table, articles::{pages::ArticleEdit, tables::show_articles_table}, core::{page::{Form, PageAction}, tables::{TableAction, TableMode}}, user_follows::tables::show_user_followers_table, users::tables::show_users_table};
+use crate::ui::{article_favorites::tables::show_user_favorites_table, articles::{pages::ArticleEdit, tables::show_articles_table}, core::{page::{self, Form, PageAction}, tables::{TableAction, TableMode}}, user_follows::tables::show_user_followers_table, users::tables::show_users_table};
 use command_bus::{CommandBus, UIBus};
 
 #[derive(Default)]
@@ -137,7 +137,7 @@ pub struct UserFavoritesTab {
 }
 
 impl Form for UserFavoritesTab {
-    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, _page_action: &mut PageAction) {
+    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, page_action: &mut PageAction) {
         if !self.initialized {
             self.event_bus.send_task(tx,UICommand::ArticleFavorite(ArticleFavoriteCommand::LoadByUserId(self.user_id)));
             self.initialized = true;
@@ -155,7 +155,7 @@ impl Form for UserFavoritesTab {
                     self.event_bus.send_task(tx,UICommand::ArticleFavorite(ArticleFavoriteCommand::Delete(ids)));
                 },
                 TableAction::LinkItem(id) => {
-                    self.event_bus.send_task(tx, UICommand::Article(ArticleCommand::Load(id)));
+                    *page_action = PageAction::Navigate(core::entities::EntityIdent::Article(id));
                 }
                 _ => {
                     
@@ -210,9 +210,6 @@ impl Form for UserFavoritesTab {
                 },
                 UIResult::Article(ArticleResult::Articles(articles)) => {
                     self.articles = Some(articles);
-                },
-                UIResult::Article(ArticleResult::Article(article)) => {
-                    emit(PageAction::AddPage(Box::new(ArticleEdit::new(article))));
                 },
                 UIResult::Created => {
                     self.initialized = false;

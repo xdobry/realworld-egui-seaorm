@@ -1,6 +1,6 @@
 use sea_orm::entity::prelude::*;
 use serde::{Serialize, Deserialize};
-use models::entity::comments::{ActiveModel, Model};
+use models::entity::comments::Model;
 
 use crate::dto::ChangeRecord;
 

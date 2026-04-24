@@ -43,7 +43,44 @@ In some sense, Rust brings back that idea in a modern form.
 
 There is also great value in fast, reliable software with no memory leaks. In many cases, this is more important than fancy UI effects or animations.
 
+# Cost of complexity
 
+Multiple programming languages and complex devops, architectures makes the project big even at start.
+Many project members that need even more member to coordinate.
+Big project often mean more money but if result matters you should consider to reduce the complexity at start.
+
+![screenshot](docu_res/er_diagramm.png)
+
+# It is really small
+
+Here the binary sizes and used memory.
+It is really more than 10x smaller.
+It means it starts immediately.
+The whole server fits into CPU memory cache.
+It can run on small cheap devices or low level cloud services. 
+
+You do not need any fancy architectures if the application is just fast and you safe a lot of money on server costs.
+
+|| application || binary size || runtime size ||
+| fat-client | 11MB | |
+| quic-client | 10MB | |
+| web-client | 6MB | |
+| quic-server | 9MB | 9MB |
+| web-server | 6MB | |
+
+Even wasm web-client loads and starts immediately. It is some MB big but it is loaded
+at once. Wasm compilation is even faster then load time. No JS overhead.
+
+Because Rust do not waste memory on garbage collector the memory usage is small and depends only on throughput.
+So you do not need to reserve 20 GB for it.
+
+I have not tested the of the quic-server. It will be quite interesting to compare how quic protocol perform in comparison to https.
+Currently web-server starts http. Quic protocol is already secured.
+
+Quic-Server and Quic-client could be good alternatives to common native mobile apps.
+The small memory print is on mobile apps even more important.
+
+I suppose that many embedded devices could use the same techniques.
 
 # With the little help of AI
 
