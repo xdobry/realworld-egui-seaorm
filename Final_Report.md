@@ -49,7 +49,7 @@ Multiple programming languages and complex devops, architectures makes the proje
 Many project members that need even more member to coordinate.
 Big project often mean more money but if result matters you should consider to reduce the complexity at start.
 
-![screenshot](docu_res/er_diagramm.png)
+![screenshot](docu_res/itteam.png)
 
 # It is really small
 
@@ -61,12 +61,13 @@ It can run on small cheap devices or low level cloud services.
 
 You do not need any fancy architectures if the application is just fast and you safe a lot of money on server costs.
 
-|| application || binary size || runtime size ||
-| fat-client | 11MB | |
-| quic-client | 10MB | |
-| web-client | 6MB | |
-| quic-server | 9MB | 9MB |
-| web-server | 6MB | |
+| application | binary size | runtime size |
+|-------------|-------------| -------------|
+| fat-client  | 11MB        | 30MB         |
+| quic-client | 10MB        |              |
+| web-client  | 6MB         |              |
+| quic-server | 9MB         |              |
+| web-server  | 6MB         |              |
 
 Even wasm web-client loads and starts immediately. It is some MB big but it is loaded
 at once. Wasm compilation is even faster then load time. No JS overhead.
