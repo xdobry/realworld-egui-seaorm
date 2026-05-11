@@ -1,7 +1,7 @@
 use sea_orm::entity::prelude::*;
 use serde::{Serialize, Deserialize};
 use models::entity::article_favorites::Model;
-use crate::article_favorites::dto::UserFavoriteUI;
+use crate::{api::AuthContext, article_favorites::dto::UserFavoriteUI};
 
 use super::dto::ArticleFavoriteUI;
 
@@ -11,6 +11,19 @@ pub enum ArticleFavoriteCommand {
     LoadByUserId(Uuid),
     Create(Model),
     Delete((Uuid,Uuid)),
+}
+
+impl ArticleFavoriteCommand {
+    pub fn has_access(&self, auth_context: &AuthContext) -> bool {
+        match self {
+            ArticleFavoriteCommand::LoadByArticleId(_) | ArticleFavoriteCommand::LoadByUserId(_) => {
+                true
+            }
+            _ => {
+                !auth_context.is_anonymous()
+            }
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]

@@ -1,16 +1,20 @@
 use core::{api::{UICommand, UIResult}, 
     article_favorites::{api::{ArticleFavoriteCommand, ArticleFavoriteResult}, 
-    dto::UserFavoriteUI}, articles::api::{ArticleCommand, ArticleResult}, 
+    dto::UserFavoriteUI}, articles::{api::{ArticleCommand, ArticleResult}, dto::ArticleListItem}, 
     user_follows::{api::{UserFollowerCommand, UserFollowerResult}, dto::UserFollowerName}, 
-    users::{api::{UserCommand, UserResult}}};
+    users::api::{UserCommand, UserResult}};
 
 use egui::{Id, Modal};
-use models::entity::{articles, users};
+use models::entity::users;
 use models::entity::user_follows;
-use models::{DateTimeWithTimeZone, Uuid};
+use models::Uuid;
 use models::entity::article_favorites;
 
-use crate::ui::{article_favorites::tables::show_user_favorites_table, articles::{pages::ArticleEdit, tables::show_articles_table}, core::{page::{self, Form, PageAction}, tables::{TableAction, TableMode}}, user_follows::tables::show_user_followers_table, users::tables::show_users_table};
+use crate::ui::{article_favorites::tables::show_user_favorites_table, 
+    articles::{tables::show_articles_table}, core::{page::{Form, PageAction, UIContext}, 
+    tables::{TableAction, TableMode}}, 
+    user_follows::tables::show_user_followers_table, 
+    users::tables::show_users_table};
 use command_bus::{CommandBus, UIBus};
 
 #[derive(Default)]
@@ -21,22 +25,42 @@ pub struct UserFollowersTab {
     opened: bool,
     event_bus: UIBus,
     initialized: bool,
+    // Shows followers of this user (true) or user that are followed by this user (followees) false
+    shows_followers: bool,
 }
 
 impl Form for UserFollowersTab {
-    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, _page_action: &mut PageAction) {
+    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext, _page_action: &mut PageAction) {
         if !self.initialized {
-            self.event_bus.send_task(tx,UICommand::UserFollower(UserFollowerCommand::LoadByFolloweeId(self.user_id)));
+            let user_command = if self.shows_followers {
+                UserFollowerCommand::LoadByFolloweeId(self.user_id)
+            } else {
+                UserFollowerCommand::LoadByFollowerId(self.user_id)
+            };
+            self.event_bus.send_task(tx,UICommand::UserFollower(user_command));
             self.initialized = true;
         }
         if let Some(user_followers) = &self.user_followers {
-            if ui.button("Add Follower").clicked() {
-                self.opened = true;
-                if self.users.is_none() {
-                    self.event_bus.send_task(tx,UICommand::User(UserCommand::Reload));
+            if ui_context.is_admin() {
+                if ui.button("Add Follower").clicked() {
+                    self.opened = true;
+                    if self.users.is_none() {
+                        self.event_bus.send_task(tx,UICommand::User(UserCommand::Reload));
+                    }
+                }
+            } else if !ui_context.is_anonymous() {
+                if self.user_id!=ui_context.user_id() {
+                    if ui.button("Follow").clicked() {
+                        let user_follower = user_follows::Model {
+                            follower_id: ui_context.user_id(),
+                            followee_id: self.user_id,
+                            created_at: core::time_now(),
+                        };
+                        self.event_bus.send_task(tx,UICommand::UserFollower(UserFollowerCommand::Create(user_follower)));
+                    }
                 }
             }
-            let table_action = show_user_followers_table(ui, user_followers, TableMode::Delete);
+            let table_action = show_user_followers_table(ui, user_followers, ui_context, self.shows_followers);
             match table_action {
                 TableAction::DeleteItem(ids) => {
                     self.event_bus.send_task(tx,UICommand::UserFollower(UserFollowerCommand::Delete(ids)));
@@ -114,7 +138,7 @@ impl Form for UserFollowersTab {
 }
 
 impl UserFollowersTab {
-    pub fn new(user_id: Uuid) -> Self {
+    pub fn new(user_id: Uuid, shows_followers: bool) -> Self {
         Self {
             user_id,
             user_followers: None,
@@ -122,6 +146,7 @@ impl UserFollowersTab {
             opened: false,
             event_bus: UIBus::default(),
             initialized: false,
+            shows_followers,
         }
     }
 }
@@ -130,26 +155,28 @@ impl UserFollowersTab {
 pub struct UserFavoritesTab {
     user_id: Uuid,
     user_favorites: Option<Vec<UserFavoriteUI>>,
-    articles: Option<Vec<articles::Model>>,
+    articles: Option<Vec<ArticleListItem>>,
     opened: bool,
     event_bus: UIBus,
     initialized: bool,
 }
 
 impl Form for UserFavoritesTab {
-    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, page_action: &mut PageAction) {
+    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext, page_action: &mut PageAction) {
         if !self.initialized {
             self.event_bus.send_task(tx,UICommand::ArticleFavorite(ArticleFavoriteCommand::LoadByUserId(self.user_id)));
             self.initialized = true;
         }
         if let Some(user_favorites) = &self.user_favorites {
-            if ui.button("Add Favorite").clicked() {
-                self.opened = true;
-                if self.articles.is_none() {
-                    self.event_bus.send_task(tx,UICommand::Article(ArticleCommand::Reload));
+            if ui_context.is_user_or_admin(self.user_id) {
+                if ui.button("Add Favorite").clicked() {
+                    self.opened = true;
+                    if self.articles.is_none() {
+                        self.event_bus.send_task(tx,UICommand::Article(ArticleCommand::Reload));
+                    }
                 }
             }
-            let table_action = show_user_favorites_table(ui, user_favorites, TableMode::Delete);
+            let table_action = show_user_favorites_table(ui, user_favorites, if ui_context.is_user_or_admin(self.user_id) { TableMode::Delete} else { TableMode::Nothing});
             match table_action {
                 TableAction::DeleteItem(ids) => {
                     self.event_bus.send_task(tx,UICommand::ArticleFavorite(ArticleFavoriteCommand::Delete(ids)));
@@ -165,7 +192,7 @@ impl Form for UserFavoritesTab {
                 let modal = Modal::new(Id::new("mod_add_tag")).show(ui.ctx(), |ui| {
                     ui.set_width(200.0);
                     if let Some(articles) = &self.articles {
-                        let table_action = show_articles_table(ui,articles, TableMode::Select);
+                        let table_action = show_articles_table(ui, articles, ui_context, true);
                         match table_action {
                             TableAction::SelectItem(uuid,_label) => {
                                 let now = core::time_now();
@@ -208,7 +235,7 @@ impl Form for UserFavoritesTab {
                 UIResult::ArticleFavorite(ArticleFavoriteResult::UserFavorites(user_favorites)) => {
                    self.user_favorites = Some(user_favorites);
                 },
-                UIResult::Article(ArticleResult::Articles(articles)) => {
+                UIResult::Article(ArticleResult::ArticleList(articles)) => {
                     self.articles = Some(articles);
                 },
                 UIResult::Created => {

@@ -30,6 +30,10 @@ pub struct Model {
         on_delete = "Cascade"
     )]
     pub users_1: HasOne<super::users::Entity>,
+
+    //#[sea_orm(has_many, from="followee_id", to = "article_id")]
+    //pub articles: HasMany<super::articles::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+

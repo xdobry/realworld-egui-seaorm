@@ -19,6 +19,7 @@ pub struct Model {
     pub image: Option<String>,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
+    pub is_admin: bool,
     #[sea_orm(has_many)]
     pub comments: HasMany<super::comments::Entity>,
     #[sea_orm(has_many, via = "article_favorites")]

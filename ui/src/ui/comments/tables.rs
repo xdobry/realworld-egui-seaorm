@@ -2,11 +2,11 @@ use egui::Sense;
 use egui_extras::{Column, TableBuilder};
 use models::Uuid;
 
-use crate::ui::{core::tables::{TableAction, TableMode}, utils::strong_unselectable};
+use crate::ui::{core::{page::UIContext, tables::{TableAction, TableMode}}, utils::{date_time_ft, strong_unselectable}};
 use core::comments::dto::CommentAuthor;
 
 
-pub fn show_comments_author_table(ui: &mut egui::Ui, comments: &Vec<CommentAuthor>, table_mode: TableMode) -> TableAction<Uuid> {
+pub fn show_comments_author_table(ui: &mut egui::Ui, comments: &Vec<CommentAuthor>, ui_context: &UIContext) -> TableAction<Uuid> {
     let mut table_action = TableAction::None;
     let height = ui.available_height();
     let text_height = egui::TextStyle::Body
@@ -18,6 +18,8 @@ pub fn show_comments_author_table(ui: &mut egui::Ui, comments: &Vec<CommentAutho
         .striped(true)
         .resizable(true)
         .cell_layout(egui::Layout::left_to_right(egui::Align::Center));
+
+    let table_mode = TableMode::Select;
     let table = table_mode.add_action_column(table)
         .column(Column::exact(200.0).at_least(30.0).at_most(300.0))
         .column(Column::exact(200.0).at_least(30.0).at_most(300.0))
@@ -44,7 +46,12 @@ pub fn show_comments_author_table(ui: &mut egui::Ui, comments: &Vec<CommentAutho
         .body(|body| {
             body.rows(text_height, comments.len(), |mut row| {
                 let comment = comments.get(row.index()).unwrap();
-                table_mode.add_action_rows(&mut row, comment.id, "", &mut table_action, None);
+                let row_table_mode = if ui_context.is_user_or_admin(comment.author_id) {
+                    TableMode::EditDelete
+                } else {
+                    TableMode::Select
+                };
+                row_table_mode.add_action_rows(&mut row, comment.id, "", &mut table_action, None);
                 row.col(|ui| {
                     ui.label(&comment.author_name);
                 });
@@ -52,7 +59,7 @@ pub fn show_comments_author_table(ui: &mut egui::Ui, comments: &Vec<CommentAutho
                     ui.label(&comment.body);
                 });
                 row.col(|ui| {
-                    ui.label(comment.created_at.to_string().as_str());
+                    ui.label(date_time_ft(comment.created_at));
                 });
             });
         });

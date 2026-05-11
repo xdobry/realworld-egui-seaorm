@@ -4,8 +4,8 @@ use models::Uuid;
 use crate::ui::{article_favorites::tables::show_article_favorites_table, 
     article_tags::tables::show_article_tags_table, 
     comments::{forms::CommentForm, tables::show_comments_author_table}, 
-    core::{page::{Form, PageAction}, tables::{TableAction, TableMode}}, 
-    tags::tables::show_tags_table, users::{pages::UserEdit, tables::show_users_table}};
+    core::{page::{Form, PageAction, UIContext}, tables::{TableAction, TableMode}}, 
+    tags::tables::show_tags_table, users::{tables::show_users_table}};
 
 use command_bus::{CommandBus, UIBus};
 
@@ -31,19 +31,21 @@ pub struct ArticleTagsTab {
 }
 
 impl Form for ArticleTagsTab {
-    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, _page_action: &mut PageAction) {
+    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext, _page_action: &mut PageAction) {
         if !self.initialized {
             self.event_bus.send_task(tx,UICommand::ArticleTag(ArticleTagCommand::LoadByArticleId(self.article_id)));
             self.initialized = true;
         }
         if let Some(article_tags) = &self.article_tags {
-            if ui.button("Add Tag").clicked() {
-                self.opened = true;
-                if self.tags.is_none() {
-                    self.event_bus.send_task(tx,UICommand::Tag(TagCommand::Reload));
+            if ui_context.is_admin() {
+                if ui.button("Add Tag").clicked() {
+                    self.opened = true;
+                    if self.tags.is_none() {
+                        self.event_bus.send_task(tx,UICommand::Tag(TagCommand::Reload));
+                    }
                 }
             }
-            let table_action = show_article_tags_table(ui, article_tags, TableMode::Delete);
+            let table_action = show_article_tags_table(ui, article_tags, if ui_context.is_admin() {TableMode::Delete} else {TableMode::Nothing});
             match table_action {
                 TableAction::DeleteItem(ids) => {
                     self.event_bus.send_task(tx,UICommand::ArticleTag(ArticleTagCommand::Delete(ids)));
@@ -145,19 +147,31 @@ pub struct ArticleFavoriteTab {
 }
 
 impl Form for ArticleFavoriteTab {
-    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, page_action: &mut PageAction) {
+    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext, page_action: &mut PageAction) {
         if !self.initialized {
             self.event_bus.send_task(tx,UICommand::ArticleFavorite(ArticleFavoriteCommand::LoadByArticleId(self.article_id)));
             self.initialized = true;
         }
         if let Some(article_favorites) = &self.article_favorites {
-            if ui.button("Add Favorite").clicked() {
-                self.opened = true;
-                if self.users.is_none() {
-                    self.event_bus.send_task(tx,UICommand::User(UserCommand::Reload));
+            if !ui_context.is_anonymous() {
+                if ui.button("Add Favorite").clicked() {
+                    if ui_context.is_admin() {
+                        self.opened = true;
+                        if self.users.is_none() {
+                            self.event_bus.send_task(tx,UICommand::User(UserCommand::Reload));
+                        }
+                    } else {
+                        let now = core::time_now();
+                        let article_tag = article_favorites::Model {
+                            user_id: ui_context.user_id(),
+                            article_id: self.article_id,
+                            created_at: now,
+                        };
+                        self.event_bus.send_task(tx,UICommand::ArticleFavorite(ArticleFavoriteCommand::Create(article_tag)));
+                    }
                 }
             }
-            let table_action = show_article_favorites_table(ui, article_favorites, TableMode::Delete);
+            let table_action = show_article_favorites_table(ui, article_favorites, ui_context);
             match table_action {
                 TableAction::DeleteItem(ids) => {
                     self.event_bus.send_task(tx,UICommand::ArticleFavorite(ArticleFavoriteCommand::Delete(ids)));
@@ -262,28 +276,30 @@ pub struct ArticleCommentsTab {
 }
 
 impl Form for ArticleCommentsTab {
-    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, page_action: &mut PageAction) {
+    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext, page_action: &mut PageAction) {
         if !self.initialized {
             self.event_bus.send_task(tx,UICommand::Comment(CommentCommand::LoadByArticleId(self.article_id)));
             self.initialized = true;
         }
         if let Some(article_comments) = &self.article_comments {
-            if ui.button("Add Comment").clicked() {
-                let now = core::time_now();
-                let comment_author = CommentAuthor {
-                    id: core::new_uuid(),
-                    body: "".to_string(),
-                    article_id: self.article_id,
-                    author_id: Uuid::nil(),
-                    author_name: "".to_string(),
-                    created_at: now,
-                    updated_at: now,
-                };
-                let comment_orig = comment_author.to_model();
-                self.comment_edit = false;
-                self.comment_form = Some((CommentForm::new(comment_author),comment_orig))
+            if !ui_context.is_anonymous() {
+                if ui.button("Add Comment").clicked() {
+                    let now = core::time_now();
+                    let comment_author = CommentAuthor {
+                        id: core::new_uuid(),
+                        body: "".to_string(),
+                        article_id: self.article_id,
+                        author_id: ui_context.user_id(),
+                        author_name: "".to_string(),
+                        created_at: now,
+                        updated_at: now,
+                    };
+                    let comment_orig = comment_author.to_model();
+                    self.comment_edit = false;
+                    self.comment_form = Some((CommentForm::new(comment_author),comment_orig))
+                }
             }
-            let table_action = show_comments_author_table(ui, article_comments, TableMode::EditDelete);
+            let table_action = show_comments_author_table(ui, article_comments, &ui_context);
             match table_action {
                 TableAction::DeleteItem(id) => {
                     self.event_bus.send_task(tx,UICommand::Comment(CommentCommand::Delete(id)));
@@ -302,7 +318,7 @@ impl Form for ArticleCommentsTab {
             if let Some((comment_form, comment_orig)) = self.comment_form.as_mut() {
                 let modal = Modal::new(Id::new("mod_add_tag")).show(ui.ctx(), |ui| {
                     ui.set_width(350.0);
-                    comment_form.show_ui(ui, tx, page_action);
+                    comment_form.show_ui(ui, tx, ui_context, page_action);
                     egui::Sides::new().show(
                         ui,
                         |_ui| {},
@@ -311,10 +327,12 @@ impl Form for ArticleCommentsTab {
                                 ui.close();
                             }
                             if self.comment_edit {
-                                if ui.button("Edit").clicked() {
-                                    let change_record = comment_form.comment.to_change_record(comment_orig);
-                                    self.event_bus.send_task(tx,UICommand::Comment(CommentCommand::Update(change_record)));
-                                    ui.close();
+                                if ui_context.is_user_or_admin(comment_orig.author_id) {
+                                    if ui.button("Edit").clicked() {
+                                        let change_record = comment_form.comment.to_change_record(comment_orig);
+                                        self.event_bus.send_task(tx,UICommand::Comment(CommentCommand::Update(change_record)));
+                                        ui.close();
+                                    }
                                 }
                             } else {
                                 if ui.button("Create").clicked() {

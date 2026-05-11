@@ -11,6 +11,10 @@ path = "src/lib.rs"
 
 [dependencies]
 tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
+models = { path="../models" }
+dotenvy = "0.15.7"
+rust-argon2 = "3.0.0"
+uuid = { version = "1.22.0", features = ["v4"] }
 
 [dependencies.sea-orm-migration]
 features = [

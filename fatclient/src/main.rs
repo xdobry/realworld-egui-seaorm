@@ -15,7 +15,7 @@ use dotenvy::dotenv;
 fn main() -> Result<(), eframe::Error> {
 
     let options = eframe::NativeOptions {
-        viewport: ViewportBuilder::default(),
+        viewport: ViewportBuilder::default().with_inner_size([1024.0,800.0]),
         ..eframe::NativeOptions::default()
     };
 

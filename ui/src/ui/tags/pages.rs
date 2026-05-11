@@ -8,7 +8,7 @@ use core::tags::api::{TagCommand, TagResult};
 use core::tags::dto::TagUI;
 use crate::ui::tags::forms::ui_tag;
 use crate::ui::tags::tables::show_tags_table;
-use crate::ui::core::page::{Page, PageAction, PageState};
+use crate::ui::core::page::{Page, PageAction, PageState, UIContext};
 use crate::ui::core::tables::{TableAction, TableMode};
 use command_bus::{CommandBus, UIBus};
 
@@ -19,20 +19,22 @@ pub struct TagTable {
 }
 
 impl Page for TagTable {
-    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus) -> PageAction {
+    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext) -> PageAction {
         let mut page_action = PageAction::None;
         ui.horizontal(|ui| {
             if ui.button("Reload").clicked() {
                 self.event_bus.send_task(tx, UICommand::Tag(TagCommand::Reload));
             }
-            if ui.button("Create Tag").clicked() {
-                page_action = PageAction::AddPage(Box::new(TagEdit::new_create(TagUI::new())));
+            if ui_context.is_admin() {
+                if ui.button("Create Tag").clicked() {
+                    page_action = PageAction::AddPage(Box::new(TagEdit::new_create(TagUI::new())));
+                }
             }
             if ui.button("Close").clicked() {
                 self.should_close = true;
             }
         });
-        let table_action = show_tags_table(ui, &self.tags, TableMode::EditDelete);
+        let table_action = show_tags_table(ui, &self.tags, if ui_context.is_admin() {TableMode::EditDelete} else {TableMode::Select});
         match table_action {
             TableAction::SelectItem(tag_id, _label) => {
                 page_action = PageAction::Navigate(EntityIdent::Tag(tag_id));
@@ -43,7 +45,7 @@ impl Page for TagTable {
         }
         page_action
     }
-    fn update(&mut self, _tx: &mut CommandBus,emit: &mut dyn FnMut(PageAction)) {
+    fn update(&mut self, _tx: &mut CommandBus, _ui_context: &UIContext, emit: &mut dyn FnMut(PageAction)) {
         if let Ok(msg) = self.event_bus.try_recv() {
             match msg {
                 UIResult::Tag(TagResult::Tags(tags)) => {
@@ -58,7 +60,7 @@ impl Page for TagTable {
             }
         }
     }
-    fn title(&self) -> &str {
+    fn title(&self, _ui_context: &UIContext) -> &str {
         "Tags"
     }
     fn as_any(&self) -> &dyn Any {
@@ -67,7 +69,7 @@ impl Page for TagTable {
     fn should_close(&self) -> bool {
         self.should_close
     }
-    fn init(&mut self, tx: &mut CommandBus) {
+    fn init(&mut self, tx: &mut CommandBus, _ui_context: &UIContext) {
         self.event_bus.send_task(tx, UICommand::Tag(TagCommand::Reload));
     }
 }
@@ -92,7 +94,7 @@ pub struct TagEdit {
 }
 
 impl Page for TagEdit {
-    fn init(&mut self, tx: &mut CommandBus) {
+    fn init(&mut self, tx: &mut CommandBus, _ui_context: &UIContext) {
         if self.tag.is_none() {
             if let EntityIdent::Tag(tag_id) = self.ident {
                 self.event_bus.send_task(tx,UICommand::Tag(TagCommand::Load(tag_id)));
@@ -100,7 +102,7 @@ impl Page for TagEdit {
             }
         }
     }    
-    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus) -> PageAction {
+    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext) -> PageAction {
         let mut page_action = PageAction::None;
         if self.tag.is_none() {
             ui.label("Loading...");
@@ -121,8 +123,10 @@ impl Page for TagEdit {
                         ui.label("Loading...");
                     }
                     PageState::Show => {
-                        if ui.button("Start Updating").clicked() {
-                            self.page_state = PageState::Update;
+                        if ui_context.is_admin() {
+                            if ui.button("Start Updating").clicked() {
+                                self.page_state = PageState::Update;
+                            }
                         }
                     }
                     PageState::Create => {
@@ -141,6 +145,9 @@ impl Page for TagEdit {
                         ui.label("Updated");
                     }
                 }
+                if ui.button("Articles").clicked() {
+                    page_action = PageAction::Navigate(EntityIdent::ArticleListTag(tag.id));
+                }
                 if ui.button("Close").clicked() {
                     self.should_close = true;
                 }
@@ -151,7 +158,7 @@ impl Page for TagEdit {
         }
         page_action
     }
-    fn title(&self) -> &str {
+    fn title(&self, _ui_context: &UIContext) -> &str {
         "Edit Tag"
     }
     fn as_any(&self) -> &dyn Any {
@@ -160,7 +167,7 @@ impl Page for TagEdit {
     fn should_close(&self) -> bool {
         self.should_close
     }
-    fn update(&mut self, _tx: &mut CommandBus,emit: &mut dyn FnMut(PageAction)) {
+    fn update(&mut self, _tx: &mut CommandBus, _ui_context: &UIContext, emit: &mut dyn FnMut(PageAction)) {
         if let Ok(msg) = self.event_bus.try_recv() {
             match msg {
                 UIResult::Updated(_) => {

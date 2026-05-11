@@ -2,7 +2,7 @@ use egui::Sense;
 use egui_extras::{Column, TableBuilder};
 use models::Uuid;
 
-use crate::ui::{core::tables::{TableAction, TableMode}, utils::strong_unselectable};
+use crate::ui::{core::tables::{TableAction, TableMode}, utils::{date_time_ft, strong_unselectable}};
 use core::article_tags::dto::ArticleTagUI;
 
 pub fn show_article_tags_table(ui: &mut egui::Ui, articles: &Vec<ArticleTagUI>, table_mode: TableMode) -> TableAction<(Uuid,Uuid)> {
@@ -44,7 +44,7 @@ pub fn show_article_tags_table(ui: &mut egui::Ui, articles: &Vec<ArticleTagUI>, 
                     ui.label(&article.tag_name);
                 });
                 row.col(|ui| {
-                    ui.label(article.created_at.to_string().as_str());
+                    ui.label(date_time_ft(article.created_at));
                 });
             });
         });

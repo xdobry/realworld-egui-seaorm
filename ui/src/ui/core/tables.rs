@@ -15,6 +15,7 @@ pub enum TableMode {
     EditDelete,
     Select,
     Delete,
+    Nothing,
 }
 
 impl TableMode {
@@ -54,6 +55,9 @@ impl TableMode {
                         }
                     }
                 });
+            }
+            Self::Nothing => {
+                row.col(|_ui| {});
             }
         }
     }

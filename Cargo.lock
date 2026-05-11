@@ -3271,8 +3271,12 @@ dependencies = [
 name = "migration"
 version = "0.1.0"
 dependencies = [
+ "dotenvy",
+ "models",
+ "rust-argon2",
  "sea-orm-migration",
  "tokio",
+ "uuid",
 ]
 
 [[package]]

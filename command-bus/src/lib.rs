@@ -10,7 +10,7 @@ pub struct CommandBus {
 }
 
 impl CommandBus {
-    pub fn dispatch(&mut self, cmd: UITask) {
+    pub fn dispatch(&self, cmd: UITask) {
         #[cfg(not(target_arch = "wasm32"))]
         let _rx = self.tx.try_send(cmd);
         #[cfg(target_arch = "wasm32")]

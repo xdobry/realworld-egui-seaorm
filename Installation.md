@@ -15,6 +15,14 @@ You can also set the database url as env Variable "DATABASE_URL"
 
 [Migration Doc](migration/README.md)
 
+   ```cargo run -p migration -- up```
+
+## add admin user
+
+   ```cargo run -p migration -- add-admin admin@email.com admin_password```
+
+   Will add admin with email: *admin@email.com* and password: *admin_password*
+
 ## Start desktop fat client
 
    ```sh

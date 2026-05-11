@@ -21,6 +21,7 @@ pub enum DbValue {
     TimeDateTimeWithTimeZone(TimeDateTimeWithTimeZone),
     ChronoDateTimeWithTimeZone(DateTimeWithTimeZone),
     Uuid(uuid::Uuid),
+    Bool(bool),
     Null,
 }
 
@@ -119,6 +120,16 @@ impl From<Value> for DbValue {
                     }
                 }
             }
+            Value::Bool(v) => {
+                match v {
+                    Some(v) => {
+                        DbValue::Bool(v)
+                    }
+                    None => {
+                        DbValue::Null
+                    }
+                }
+            }
             _ => {
                 panic!("unsupported Value type {:?}",value);
             }
@@ -141,6 +152,9 @@ impl From<&DbValue> for Value {
             }
             DbValue::ChronoDateTimeWithTimeZone(v) => {
                 Value::ChronoDateTimeWithTimeZone(Some(*v))
+            }
+            DbValue::Bool(bool_v) => {
+                Value::Bool(Some(*bool_v))
             }
             DbValue::Null => {
                 panic!("can not be null")

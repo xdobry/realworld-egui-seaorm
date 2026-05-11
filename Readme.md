@@ -1,26 +1,26 @@
 # RealWorld App – Rust + egui Multi-Architecture Demo
 
-This project is a prototype implementation of the [realworl app](https://github.com/realworld-apps/realworld) using a full-stack Rust approach.
+This project is a prototype implementation of the [realworl app](https://github.com/realworld-apps/realworld) using a `full-stack Rust` approach.
 It is learning and programming fun project.
-The prototype concerns only parts of needed functionality and features needed for production.
+The prototype concerns only parts of needed functionality and lacks some features needed for production.
 
 The project demonstrates multiple architectural variants:
 
-* *Fat client:*git s Desktop client connects directly to the SQL database
-* *Client–server* (desktop): desktop client communicates with a server via QUIC
-* *Web (WASM SPA)*: egui-based WebAssembly client communicates with an HTTP server built with Axum.
+* **Fat client:** native (desktop) client connects directly to the SQL database
+* **Client–server:** native (desktop) client communicates with a server via `QUIC`
+* **Web (WASM SPA):** egui-based WebAssembly client communicates with an `HTTP server` built with Axum.
 
 ![screenshot](docu_res/architecture_types.png)
 
 ![screenshot](docu_res/fatclient.gif)
 
-The UI and server core are implemented only once and reused across all variants.
+The **UI** and **server core** are implemented only once and reused across all variants.
 Only a few lines of code differ between the architectures.
 
-It uses following rust libraries
+It uses following rust libraries:
 * [egui](https://github.com/emilk/egui) (ui interface)
 * [sea orm](https://www.sea-ql.org/SeaORM/) persistence to sql server
-* [quinn](https://github.com/quinn-rs/quinn) quic protocol for desktop client server. Secure ssl based protocol using udp.
+* [quinn](https://github.com/quinn-rs/quinn) `quic` protocol for desktop client server. Secure ssl based protocol using udp.
 * [axum](https://github.com/tokio-rs/axum) web server
 * [postcard](https://github.com/jamesmunns/postcard) message serialization
 
@@ -34,13 +34,12 @@ It uses following rust libraries
 * Experiment with multi-crate project structures and code reuse
 * Explore alternatives to dynamic binding and reflection in Rust
 * Investigate alternatives to HTML, JavaScript, JSON, and HTTP for enterprise applications
-* Explore how to write database-independent code using SeaORM
+* Explore how to write database-independent code using `SeaORM`
 
 # Non considered parts
 
 This prototype does not focus on:
 
-* Security
 * Performance benchmarking
 * Polished UI
 * User experience

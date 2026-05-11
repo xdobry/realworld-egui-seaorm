@@ -15,6 +15,54 @@ pub enum UICommand {
     UserFollower(UserFollowerCommand),
 }
 
+impl UICommand {
+    pub fn has_access(&self, auth_context: &AuthContext) -> bool {
+        match self {
+            UICommand::Article(subcommand) => {
+                subcommand.has_access(auth_context)
+            }
+            UICommand::User(subcommand) => {
+                subcommand.has_access(auth_context)
+            }
+            UICommand::Tag(subcommand) => {
+                subcommand.has_access(auth_context)
+            }
+            UICommand::ArticleTag(subcommand) => {
+                subcommand.has_access(auth_context)
+            }
+            UICommand::ArticleFavorite(subcommand) => {
+                subcommand.has_access(auth_context)
+            }
+            UICommand::Comment(subcommand) => {
+                subcommand.has_access(auth_context)
+            }
+            UICommand::UserFollower(subcommand) => {
+                subcommand.has_access(auth_context)
+            }
+        }
+    }
+}
+
+pub struct AuthContext {
+    user_id: Option<Uuid>,
+    is_admin: bool,
+}
+
+impl AuthContext {
+    pub fn is_anonymous(&self) -> bool {
+        self.user_id.is_none()
+    }
+    pub fn is_admin(&self) -> bool {
+        self.is_admin
+    }
+    pub fn new(user_id: Option<Uuid>, is_admin: bool) -> Self {
+        Self {
+            user_id,
+            is_admin
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub enum UIResult {
     Article(ArticleResult),

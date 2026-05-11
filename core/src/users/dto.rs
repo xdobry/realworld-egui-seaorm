@@ -15,6 +15,7 @@ pub struct UserUI {
     pub password_hash: String,
     pub bio: String,
     pub image: String,
+    pub is_admin: bool,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
 }
@@ -30,6 +31,7 @@ impl UserUI {
             image: model.image.clone().unwrap_or(String::new()),
             created_at: model.created_at,
             updated_at: model.updated_at,
+            is_admin: model.is_admin,
         }
     }
 
@@ -43,6 +45,7 @@ impl UserUI {
             image: if self.image.len()>0 {Some(self.image.clone())} else {None},
             created_at: self.created_at,
             updated_at: self.updated_at,
+            is_admin: self.is_admin,
         }
     }
 
@@ -67,6 +70,14 @@ pub struct LoginUser {
     pub email: String,
     pub password: String,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RegisterUser {
+    pub email: String,
+    pub name: String,
+    pub password: String,
+}
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LoginResponse {

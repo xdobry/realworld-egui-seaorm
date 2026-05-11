@@ -25,9 +25,23 @@ pub struct Model {
     pub comments: HasMany<super::comments::Entity>,
     #[sea_orm(has_many, via = "article_tags")]
     pub tags: HasMany<super::tags::Entity>,
+
+    #[sea_orm(has_many)]
+    pub article_tags: HasMany<super::article_tags::Entity>,
+
+    #[sea_orm(has_many)]
+    pub article_favorites: HasMany<super::article_favorites::Entity>,
+
     #[sea_orm(has_many, via = "article_favorites")]
     pub users: HasMany<super::users::Entity>,
+
+
+    //#[sea_orm(has_many, from="author_id", to="followee_id", relation_enum="Auth")]
+    //pub user_follows: HasMany<super::user_follows::Entity>,
+
 }
 
 
 impl ActiveModelBehavior for ActiveModel {}
+
+

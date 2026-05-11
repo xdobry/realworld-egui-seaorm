@@ -24,7 +24,7 @@ I am not a fan of breaking dependencies by duplicating structures that contain t
 
 For this reason, the UI and server share the same struct/entity definitions, even though they are “polluted” with persistence annotations from SeaORM.
 
-Thanks to the compiler, the SeaORM dependencies are not included in the UI binary, so this is a practical solution for me. 
+Thanks to the compiler, the `SeaORM` dependencies are not included in the UI binary, so this is a practical solution for me. 
 A cleaner approach might be to define pure Rust structs and apply database annotations separately.
 
 ## Module Dependencies
@@ -43,20 +43,22 @@ The model code was generated automatically using the SeaORM CLI:
 ## Concrete solved challenges
 
 * Single-threaded UI (egui):
-egui runs on a single thread, while database interaction requires async operations that cannot be executed directly in UI code.
+`egui` runs on a single thread, while database interaction requires async operations that cannot be executed directly in UI code.
 To solve this, messages (e.g., “load user”, “create user”) are sent to an async-capable worker via a message bus (based on mpsc).
 This results in an architecture similar to the Elm pattern, where the UI communicates with the backend via async messages.
 * Async abstraction for desktop and WASM:
-The desktop UI uses Tokio for async communication with the database or a QUIC server.
-The WASM UI cannot use Tokio, so it uses poll-promise.
+The desktop UI uses `Tokio` for async communication with the database or a `QUIC` server.
+The `WASM UI` cannot use Tokio, so it uses `poll-promise`.
 A command bus abstraction hides these differences and provides a unified interface.
 * Stateless Servers
-* HMAC signed token for authentication and authorization. 
+* `HMAC` signed token for authentication and authorization. 
 * Binary message protocol:
-Messages are serialized into a compact binary format using postcard and serde.
+Messages are serialized into a compact binary format using `postcard` and `serde`.
 The web server exposes a single endpoint for all UI messages/commands. This is not RESTful; WebSocket or WebTransport would likely be a better fit.
-The same serialization format is used for both QUIC and HTTP communication.
+The same serialization format is used for both `QUIC` and `HTTP` communication.
 * UI abstraction:
 An egui page trait abstracts the use of the command bus for backend communication.
 * Shared entities:
-SeaORM entities are used both in the backend and in the UI to avoid duplicating data structures.
+`SeaORM` entities are used both in the backend and in the UI to avoid duplicating data structures.
+* Authorization on client and server side. User can modify only chosen own entities. So it handles IDOR attacks (Insecure data object references).
+

@@ -1,3 +1,4 @@
+use sea_orm::FromQueryResult;
 use sea_orm::{prelude::DateTimeWithTimeZone};
 use sea_orm::entity::prelude::*;
 use serde::{Serialize, Deserialize};
@@ -10,6 +11,13 @@ pub struct TagUI {
     pub id: Uuid,
     pub name: String,
     pub created_at: DateTimeWithTimeZone,
+}
+
+#[derive(FromQueryResult, Default, Clone, Serialize, Deserialize, Debug)]
+pub struct TagListItem {
+    pub id: Uuid,
+    pub name: String,
+    pub count: i64,
 }
 
 impl TagUI {

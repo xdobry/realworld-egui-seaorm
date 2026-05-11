@@ -18,6 +18,25 @@ pub struct ArticleUI {
     pub updated_at: DateTimeWithTimeZone,
 }
 
+#[derive(FromQueryResult, Default, Clone, Serialize, Deserialize, Debug)]
+pub struct ArticleListItem {
+    pub id: Uuid,
+    pub title: String,
+    pub description: String,
+    pub author_id: Uuid,
+    pub created_at: DateTimeWithTimeZone,
+}
+
+#[derive(FromQueryResult, Default, Clone, Serialize, Deserialize, Debug)]
+pub struct ArticlePopularListItem {
+    pub id: Uuid,
+    pub title: String,
+    pub description: String,
+    pub author_id: Uuid,
+    pub created_at: DateTimeWithTimeZone,
+    pub count: i64,
+}
+
 impl ArticleUI {
     pub fn from_model(model: &Model, author_label: String) -> Self {
         Self {
@@ -50,11 +69,11 @@ impl ArticleUI {
         ChangeRecord::from_models::<Entity>(&self.to_model(), &orig.to_model())
     }
 
-    pub fn new() -> Self {
+    pub fn new(author_id: Uuid) -> Self {
         let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
         Self {
             id: Uuid::new_v4(),
-            author_id: Uuid::nil(),
+            author_id,
             created_at: now,
             updated_at: now,
             ..Default::default()

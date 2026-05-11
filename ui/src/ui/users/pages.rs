@@ -7,7 +7,7 @@ use core::users::dto::UserUI;
 use command_bus::{CommandBus, UIBus};
 use crate::ui::users::forms::ui_user;
 use crate::ui::users::tables::show_users_table;
-use crate::ui::core::page::{Page, PageAction, PageState};
+use crate::ui::core::page::{Page, PageAction, PageState, UIContext};
 use crate::ui::core::tables::{TableAction, TableMode};
 use crate::ui::users::tabs::{UserFavoritesTab, UserFollowersTab};
 use crate::ui::core::page::Form;
@@ -22,20 +22,22 @@ pub struct UserTable {
 }
 
 impl Page for UserTable {
-    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus) -> PageAction {
+    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext) -> PageAction {
         let mut page_action = PageAction::None;
         ui.horizontal(|ui| {
             if ui.button("Reload").clicked() {
                 self.event_bus.send_task(tx, UICommand::User(UserCommand::Reload));
             }
-            if ui.button("Create User").clicked() {
-                page_action = PageAction::AddPage(Box::new(UserEdit::new_create()));
+            if ui_context.is_admin() {
+                if ui.button("Create User").clicked() {
+                    page_action = PageAction::AddPage(Box::new(UserEdit::new_create()));
+                }
             }
             if ui.button("Close").clicked() {
                 self.should_close = true;
             }
         });
-        let table_action = show_users_table(ui, &self.users, TableMode::EditDelete);
+        let table_action = show_users_table(ui, &self.users, if ui_context.is_admin() {TableMode::EditDelete} else {TableMode::Select});
         match table_action {
             TableAction::SelectItem(user_id, _label) => {
                 page_action = PageAction::Navigate(EntityIdent::User(user_id));
@@ -49,7 +51,7 @@ impl Page for UserTable {
         }
         page_action
     }
-    fn update(&mut self, _tx: &mut CommandBus,emit: &mut dyn FnMut(PageAction)) {
+    fn update(&mut self, _tx: &mut CommandBus, _ui_context: &UIContext, emit: &mut dyn FnMut(PageAction)) {
         if let Ok(msg) = self.event_bus.try_recv() {
             match msg {
                 UIResult::User(user_result) => {
@@ -74,7 +76,7 @@ impl Page for UserTable {
             }
         }
     }
-    fn title(&self) -> &str {
+    fn title(&self, _ui_context: &UIContext) -> &str {
         "Users"
     }
     fn as_any(&self) -> &dyn Any {
@@ -83,7 +85,7 @@ impl Page for UserTable {
     fn should_close(&self) -> bool {
         self.should_close
     }
-    fn init(&mut self, tx: &mut CommandBus) {
+    fn init(&mut self, tx: &mut CommandBus, _ui_context: &UIContext) {
         self.event_bus.send_task(tx, UICommand::User(UserCommand::Reload));
     }
 }
@@ -102,6 +104,7 @@ pub enum UserTab {
     Details,
     Favorites,
     Followers,
+    FollowedUsers,
 }
 
 pub struct UserEdit {
@@ -109,6 +112,7 @@ pub struct UserEdit {
     user: Option<UserUI>,
     orig_user: Option<users::Model>,
     user_followers_tab: UserFollowersTab,
+    followed_users_tab: UserFollowersTab,
     user_favorites_tab: UserFavoritesTab,
     page_state: PageState,
     current_tab: UserTab,
@@ -117,7 +121,7 @@ pub struct UserEdit {
 }
 
 impl Page for UserEdit {
-    fn init(&mut self, tx: &mut CommandBus) {
+    fn init(&mut self, tx: &mut CommandBus, _ui_context: &UIContext) {
         if self.user.is_none() {
             if let EntityIdent::User(user_id) = self.ident {
                 self.event_bus.send_task(tx,UICommand::User(UserCommand::Load(user_id)));
@@ -125,7 +129,7 @@ impl Page for UserEdit {
             }
         }
     }
-    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus) -> PageAction {
+    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext) -> PageAction {
         let mut page_action = PageAction::None;
         ui.horizontal(|ui| {
             match self.page_state {
@@ -144,8 +148,12 @@ impl Page for UserEdit {
                     }
                 },
                 PageState::Show => {
-                    if ui.button("Start Update").clicked() {
-                        self.page_state = PageState::Update;
+                    if let EntityIdent::User(edited_user_id) = self.ident {
+                        if ui_context.is_user_or_admin(edited_user_id) {
+                            if ui.button("Start Update").clicked() {
+                                self.page_state = PageState::Update;
+                            }
+                        }
                     }
                 },
                 PageState::Updating => {
@@ -169,6 +177,11 @@ impl Page for UserEdit {
                     ui.label("Loading...");
                 }
             }
+            if ui.button("Show Articles").clicked() {
+                if let Some(user) = &self.user {
+                    page_action = PageAction::Navigate(EntityIdent::ArticleListAuthor(user.id));
+                }
+            }
             if ui.button("Close").clicked() {
                 self.should_close = true;
             }
@@ -182,6 +195,9 @@ impl Page for UserEdit {
                     PageState::Create | PageState::Creating => {
                     },
                     _ => {
+                        if ui.selectable_label(matches!(self.current_tab, UserTab::FollowedUsers), "Followed").clicked() {
+                            self.current_tab = UserTab::FollowedUsers;
+                        }
                         if ui.selectable_label(matches!(self.current_tab, UserTab::Followers), "Followers").clicked() {
                             self.current_tab = UserTab::Followers;
                         }
@@ -194,20 +210,23 @@ impl Page for UserEdit {
             match self.current_tab {
                 UserTab::Details => {
                     ui.add_enabled_ui(self.page_state.is_enabled(), |ui| {
-                        ui_user(ui, user);
+                        ui_user(ui, user, &ui_context);
                     });
                 },
                 UserTab::Followers => {
-                    self.user_followers_tab.show_ui(ui, tx, &mut page_action);
+                    self.user_followers_tab.show_ui(ui, tx, ui_context, &mut page_action);
+                },
+                UserTab::FollowedUsers => {
+                    self.followed_users_tab.show_ui(ui, tx, ui_context, &mut page_action);
                 },
                 UserTab::Favorites => {
-                    self.user_favorites_tab.show_ui(ui, tx, &mut page_action);
+                    self.user_favorites_tab.show_ui(ui, tx, ui_context, &mut page_action);
                 }
             }
         }
         page_action
     }
-    fn title(&self) -> &str {
+    fn title(&self, _ui_context: &UIContext) -> &str {
         "Edit User"
     }
     fn as_any(&self) -> &dyn Any {
@@ -216,7 +235,7 @@ impl Page for UserEdit {
     fn should_close(&self) -> bool {
         self.should_close
     }
-    fn update(&mut self, tx: &mut CommandBus,emit: &mut dyn FnMut(PageAction)) {
+    fn update(&mut self, tx: &mut CommandBus, _ui_context: &UIContext, emit: &mut dyn FnMut(PageAction)) {
         if let Ok(msg) = self.event_bus.try_recv() {
             match msg {
                 UIResult::Updated(_) => {
@@ -256,6 +275,7 @@ impl Page for UserEdit {
             }
         }
         self.user_followers_tab.update(tx, &mut *emit);
+        self.followed_users_tab.update(tx, &mut *emit);
         self.user_favorites_tab.update(tx, &mut *emit);
     }
     fn entity_ident(&self) -> EntityIdent {
@@ -268,7 +288,8 @@ impl UserEdit {
         Self {
             ident: EntityIdent::User(user_id),
             user: None,
-            user_followers_tab: UserFollowersTab::new(user_id),
+            user_followers_tab: UserFollowersTab::new(user_id, true),
+            followed_users_tab: UserFollowersTab::new(user_id, false),
             user_favorites_tab: UserFavoritesTab::new(user_id),
             orig_user: None,
             current_tab: UserTab::Details,
@@ -282,7 +303,8 @@ impl UserEdit {
         let user = UserUI::new_create();
         Self {
             ident: EntityIdent::User(user.id),
-            user_followers_tab: UserFollowersTab::new(user.id),
+            user_followers_tab: UserFollowersTab::new(user.id, true),
+            followed_users_tab: UserFollowersTab::new(user.id, false),
             user_favorites_tab: UserFavoritesTab::new(user.id),
             orig_user: Some(user.to_model()),
             user: Some(user),

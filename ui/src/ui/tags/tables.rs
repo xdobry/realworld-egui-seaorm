@@ -2,7 +2,7 @@ use egui::Sense;
 use egui_extras::{Column, TableBuilder};
 use models::Uuid;
 
-use crate::{ui::{core::tables::{TableAction, TableMode}, utils::strong_unselectable}};
+use crate::ui::{core::tables::{TableAction, TableMode}, utils::{date_time_ft, strong_unselectable}};
 use models::entity::tags;
 
 pub fn show_tags_table(ui: &mut egui::Ui, items: &Vec<tags::Model>, table_mode: TableMode) -> TableAction<Uuid> {
@@ -45,7 +45,7 @@ pub fn show_tags_table(ui: &mut egui::Ui, items: &Vec<tags::Model>, table_mode: 
                     ui.label(&item.name);
                 });
                 row.col(|ui| {
-                    ui.label(item.created_at.to_string().as_str());
+                    ui.label(date_time_ft(item.created_at));
                 });
                 if row.response().clicked() {
                     table_action = TableAction::SelectItem(item.id, item.name.clone())
