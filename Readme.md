@@ -23,6 +23,7 @@ It uses following rust libraries:
 * [quinn](https://github.com/quinn-rs/quinn) `quic` protocol for desktop client server. Secure ssl based protocol using udp.
 * [axum](https://github.com/tokio-rs/axum) web server
 * [postcard](https://github.com/jamesmunns/postcard) message serialization
+* [egui_commonmark](https://github.com/lampsitter/egui_commonmark) render common mark of articles
 
 # Goals of prototype
 

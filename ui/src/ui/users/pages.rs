@@ -5,6 +5,10 @@ use core::api::{UICommand, UIResult};
 use core::users::api::{UserCommand, UserResult};
 use core::users::dto::UserUI;
 use command_bus::{CommandBus, UIBus};
+use egui::Key::N;
+use egui::{Context, TextureHandle};
+use egui_commonmark::CommonMarkCache;
+use crate::ui::notebook::NoteBook;
 use crate::ui::users::forms::ui_user;
 use crate::ui::users::tables::show_users_table;
 use crate::ui::core::page::{Page, PageAction, PageState, UIContext};
@@ -22,7 +26,7 @@ pub struct UserTable {
 }
 
 impl Page for UserTable {
-    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext) -> PageAction {
+    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext, _cache: &mut CommonMarkCache) -> PageAction {
         let mut page_action = PageAction::None;
         ui.horizontal(|ui| {
             if ui.button("Reload").clicked() {
@@ -32,9 +36,6 @@ impl Page for UserTable {
                 if ui.button("Create User").clicked() {
                     page_action = PageAction::AddPage(Box::new(UserEdit::new_create()));
                 }
-            }
-            if ui.button("Close").clicked() {
-                self.should_close = true;
             }
         });
         let table_action = show_users_table(ui, &self.users, if ui_context.is_admin() {TableMode::EditDelete} else {TableMode::Select});
@@ -100,24 +101,41 @@ impl UserTable {
     }
 }
 
-pub enum UserTab {
+enum UserTab {
     Details,
-    Favorites,
-    Followers,
     FollowedUsers,
+    Followers,
+    Favorites,
 }
+
+impl TryFrom<usize> for UserTab {
+    type Error = ();
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Details),
+            1 => Ok(Self::FollowedUsers),
+            2 => Ok(Self::Followers),
+            3 => Ok(Self::Favorites),
+            _ => Err(()),
+        }
+    }
+}
+
+static USER_TABS: [&str; 4]  = ["Details", "Followed", "Followers", "Favorites"];
 
 pub struct UserEdit {
     ident: EntityIdent,
     user: Option<UserUI>,
+    title: Option<String>,
     orig_user: Option<users::Model>,
     user_followers_tab: UserFollowersTab,
     followed_users_tab: UserFollowersTab,
     user_favorites_tab: UserFavoritesTab,
     page_state: PageState,
-    current_tab: UserTab,
+    current_tab: usize,
     event_bus: UIBus,
     should_close: bool,
+    user_image: Option<TextureHandle>,
 }
 
 impl Page for UserEdit {
@@ -129,7 +147,7 @@ impl Page for UserEdit {
             }
         }
     }
-    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext) -> PageAction {
+    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext, cache: &mut CommonMarkCache) -> PageAction {
         let mut page_action = PageAction::None;
         ui.horizontal(|ui| {
             match self.page_state {
@@ -182,52 +200,57 @@ impl Page for UserEdit {
                     page_action = PageAction::Navigate(EntityIdent::ArticleListAuthor(user.id));
                 }
             }
-            if ui.button("Close").clicked() {
-                self.should_close = true;
-            }
         });
         if let Some(user) = self.user.as_mut() {
-            ui.horizontal(|ui| {
-                if ui.selectable_label(matches!(self.current_tab, UserTab::Details), "Details").clicked() {
-                    self.current_tab = UserTab::Details;
+            // perhaps the image should be loaded and converter to texture handler in separate thread if platform allows it
+            if user.image.is_some() && self.user_image.is_none() {
+                if let Some(bytes) = &user.image {
+                    self.user_image = load_image(ui.ctx(), bytes);
+                    if self.user_image.is_none() {
+                        // If data corrupt do not try to create texture in each loop
+                        user.image = None;
+                    }
                 }
+            }
+            ui.horizontal(|ui| {
                 match self.page_state {
                     PageState::Create | PageState::Creating => {
                     },
                     _ => {
-                        if ui.selectable_label(matches!(self.current_tab, UserTab::FollowedUsers), "Followed").clicked() {
-                            self.current_tab = UserTab::FollowedUsers;
-                        }
-                        if ui.selectable_label(matches!(self.current_tab, UserTab::Followers), "Followers").clicked() {
-                            self.current_tab = UserTab::Followers;
-                        }
-                        if ui.selectable_label(matches!(self.current_tab, UserTab::Favorites), "Favorites").clicked() {
-                            self.current_tab = UserTab::Favorites;
-                        }
+                        NoteBook::new(4, &mut self.current_tab, |i| USER_TABS[i].into(),200.0, false).show(ui);
                     }
                 }
             });
-            match self.current_tab {
-                UserTab::Details => {
-                    ui.add_enabled_ui(self.page_state.is_enabled(), |ui| {
-                        ui_user(ui, user, &ui_context);
-                    });
-                },
-                UserTab::Followers => {
-                    self.user_followers_tab.show_ui(ui, tx, ui_context, &mut page_action);
-                },
-                UserTab::FollowedUsers => {
-                    self.followed_users_tab.show_ui(ui, tx, ui_context, &mut page_action);
-                },
-                UserTab::Favorites => {
-                    self.user_favorites_tab.show_ui(ui, tx, ui_context, &mut page_action);
+            if let Ok(current_tab) = UserTab::try_from(self.current_tab) {
+                match current_tab {
+                    UserTab::Details => {
+                        let ui_context = if self.page_state.is_enabled() { &ui_context.as_edit() } else { ui_context};
+                        let mut new_image = false;
+                        ui_user(ui, user, &ui_context, cache, &self.user_image, &mut new_image);
+                        if new_image {
+                            self.user_image = None;
+                        }
+                    },
+                    UserTab::Followers => {
+                        self.user_followers_tab.show_ui(ui, tx, ui_context, &mut page_action);
+                    },
+                    UserTab::FollowedUsers => {
+                        self.followed_users_tab.show_ui(ui, tx, ui_context, &mut page_action);
+                    },
+                    UserTab::Favorites => {
+                        self.user_favorites_tab.show_ui(ui, tx, ui_context, &mut page_action);
+                    }
                 }
             }
         }
         page_action
     }
     fn title(&self, _ui_context: &UIContext) -> &str {
-        "Edit User"
+        if let Some(title) = &self.title {
+            title.as_str()
+        } else {
+            "User"
+        }
     }
     fn as_any(&self) -> &dyn Any {
         self
@@ -235,6 +258,7 @@ impl Page for UserEdit {
     fn should_close(&self) -> bool {
         self.should_close
     }
+
     fn update(&mut self, tx: &mut CommandBus, _ui_context: &UIContext, emit: &mut dyn FnMut(PageAction)) {
         if let Ok(msg) = self.event_bus.try_recv() {
             match msg {
@@ -242,16 +266,19 @@ impl Page for UserEdit {
                     self.page_state = PageState::Show;
                     if let Some(user) = &self.user {
                         self.orig_user = Some(user.to_model());
+                        self.title = Some(format!("\u{1F464} {}",user.username));
                     }
                 },
                 UIResult::Created => {
                     self.page_state = PageState::Show;
                     if let Some(user) = &self.user {
                         self.orig_user = Some(user.to_model());
+                        self.title = Some(format!("\u{1F464} {}",user.username));
                     }
                 },
                 UIResult::User(UserResult::User(user)) => {
                     self.user = Some(UserUI::from_model(&user));
+                    self.title = Some(format!("\u{1F464} {}",user.username));
                     self.orig_user = Some(user);
                     self.page_state = PageState::Show;
                 },
@@ -292,10 +319,12 @@ impl UserEdit {
             followed_users_tab: UserFollowersTab::new(user_id, false),
             user_favorites_tab: UserFavoritesTab::new(user_id),
             orig_user: None,
-            current_tab: UserTab::Details,
+            current_tab: 0,
             event_bus: UIBus::default(),
             page_state: PageState::Loading,
             should_close: false,
+            title: None,
+            user_image: None,
         }
     }
 
@@ -308,12 +337,23 @@ impl UserEdit {
             user_favorites_tab: UserFavoritesTab::new(user.id),
             orig_user: Some(user.to_model()),
             user: Some(user),
-            current_tab: UserTab::Details,
+            current_tab: 0,
             event_bus: UIBus::default(),
             page_state: PageState::Create,
             should_close: false,
+            title: Some("Create User".into()),
+            user_image: None,
         }
     }
 
+}
+
+pub fn load_image(ctx: &Context, bytes: &Vec<u8>) -> Option<TextureHandle> {
+    let image = egui_extras::image::load_image_bytes(bytes);
+    if let Ok(image) = image {
+        Some(ctx.load_texture("user", image, egui::TextureOptions::default()))
+    } else {
+        None
+    }
 }
 

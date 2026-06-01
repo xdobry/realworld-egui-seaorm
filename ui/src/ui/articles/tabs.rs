@@ -329,6 +329,7 @@ impl Form for ArticleCommentsTab {
                             if self.comment_edit {
                                 if ui_context.is_user_or_admin(comment_orig.author_id) {
                                     if ui.button("Edit").clicked() {
+                                        comment_form.comment.updated_at = core::time_now();
                                         let change_record = comment_form.comment.to_change_record(comment_orig);
                                         self.event_bus.send_task(tx,UICommand::Comment(CommentCommand::Update(change_record)));
                                         ui.close();

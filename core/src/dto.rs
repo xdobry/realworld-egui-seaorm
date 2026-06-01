@@ -18,6 +18,7 @@ pub struct FieldValue {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DbValue {
     String(String),
+    Bytes(Vec<u8>),
     TimeDateTimeWithTimeZone(TimeDateTimeWithTimeZone),
     ChronoDateTimeWithTimeZone(DateTimeWithTimeZone),
     Uuid(uuid::Uuid),
@@ -130,6 +131,16 @@ impl From<Value> for DbValue {
                     }
                 }
             }
+            Value::Bytes(v) => {
+                match v {
+                    Some(v) => {
+                        DbValue::Bytes(v)
+                    }
+                    None => {
+                        DbValue::Null
+                    }
+                }
+            }
             _ => {
                 panic!("unsupported Value type {:?}",value);
             }
@@ -155,6 +166,9 @@ impl From<&DbValue> for Value {
             }
             DbValue::Bool(bool_v) => {
                 Value::Bool(Some(*bool_v))
+            }
+            DbValue::Bytes(bytes) => {
+                Value::Bytes(Some(bytes.clone()))
             }
             DbValue::Null => {
                 panic!("can not be null")

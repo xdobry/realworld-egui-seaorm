@@ -71,9 +71,12 @@ impl ArticleUI {
 
     pub fn new(author_id: Uuid) -> Self {
         let now: DateTimeWithTimeZone = chrono::Local::now().with_timezone(&chrono::Local::now().offset());
+        let id =  Uuid::new_v4();
+        let slug = id.to_string();
         Self {
-            id: Uuid::new_v4(),
+            id,
             author_id,
+            slug,
             created_at: now,
             updated_at: now,
             ..Default::default()

@@ -30,7 +30,7 @@ pub struct UserFollowersTab {
 }
 
 impl Form for UserFollowersTab {
-    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext, _page_action: &mut PageAction) {
+    fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext, page_action: &mut PageAction) {
         if !self.initialized {
             let user_command = if self.shows_followers {
                 UserFollowerCommand::LoadByFolloweeId(self.user_id)
@@ -64,6 +64,9 @@ impl Form for UserFollowersTab {
             match table_action {
                 TableAction::DeleteItem(ids) => {
                     self.event_bus.send_task(tx,UICommand::UserFollower(UserFollowerCommand::Delete(ids)));
+                }
+                TableAction::LinkItem(id) => {
+                    *page_action = PageAction::Navigate(core::entities::EntityIdent::User(id));
                 }
                 _ => {
                     
@@ -176,7 +179,7 @@ impl Form for UserFavoritesTab {
                     }
                 }
             }
-            let table_action = show_user_favorites_table(ui, user_favorites, if ui_context.is_user_or_admin(self.user_id) { TableMode::Delete} else { TableMode::Nothing});
+            let table_action = show_user_favorites_table(ui, user_favorites, if ui_context.is_user_or_admin(self.user_id) { TableMode::Delete} else { TableMode::Link});
             match table_action {
                 TableAction::DeleteItem(ids) => {
                     self.event_bus.send_task(tx,UICommand::ArticleFavorite(ArticleFavoriteCommand::Delete(ids)));

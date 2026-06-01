@@ -4,3 +4,11 @@ members = ["core","models", "ui", "fatclient","quic-server"
     ,"quic-client","server-core","command-bus"
     ,"migration","web-client","web-server"
 ]
+
+
+[workspace.dependencies]
+eframe = "0.34.3"
+egui = "0.34.3"
+egui_extras = "0.34.3"
+windows = "0.62.2"
+windows-core = "0.62.2"

@@ -7,6 +7,8 @@ edition = "2024"
 core = { path = "../core" }
 models = { path = "../models" }
 command-bus = { path = "../command-bus"}
-eframe = "0.33.3"
-egui = "0.33.3"
-egui_extras = "0.33.3"
+eframe = { workspace = true }
+egui = { workspace = true }
+egui_extras = { workspace = true }
+egui_commonmark = "0.23.0"
+image = "0.25.10"

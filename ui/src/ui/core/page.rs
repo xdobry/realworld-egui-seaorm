@@ -3,10 +3,11 @@ use core::{entities::EntityIdent, users::dto::LoginResponse};
 use std::any::Any;
 
 use command_bus::CommandBus;
+use egui_commonmark::CommonMarkCache;
 use models::Uuid;
 
 pub trait Page: Any {
-    fn show(&mut self, ui: &mut egui::Ui,  tx: &mut CommandBus, ui_context: &UIContext) -> PageAction;
+    fn show(&mut self, ui: &mut egui::Ui,  tx: &mut CommandBus, ui_context: &UIContext, cache: &mut CommonMarkCache) -> PageAction;
     fn title(&self, ui_context: &UIContext) -> &str;
     fn as_any(&self) -> &dyn Any;
     fn update(&mut self, _tx: &mut CommandBus, _uc: &UIContext,_emit: &mut dyn FnMut(PageAction)) 
@@ -84,10 +85,7 @@ pub struct DbError {
 }
 
 impl Page for DbError {
-    fn show(&mut self, ui: &mut egui::Ui, _tx: &mut CommandBus, _uc: &UIContext) -> PageAction {
-        if ui.button("Close").clicked() {
-            self.should_close = true;
-        }
+    fn show(&mut self, ui: &mut egui::Ui, _tx: &mut CommandBus, _uc: &UIContext, _cache: &mut CommonMarkCache) -> PageAction {
         ui.label(self.msg.as_str());
         PageAction::None
     }

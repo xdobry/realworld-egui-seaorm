@@ -1,8 +1,8 @@
 use core::entities::EntityIdent;
 use std::any::Any;
 
+use egui_commonmark::CommonMarkCache;
 use models::Uuid;
-use models::entity::{articles};
 use core::api::{UICommand, UIResult};
 use core::articles::api::{ArticleCommand, ArticleResult};
 use core::articles::dto::{ArticleListItem, ArticlePopularListItem, ArticleUI};
@@ -12,6 +12,7 @@ use crate::ui::articles::tables::{show_articles_table, show_popular_articles_tab
 use crate::ui::articles::tabs::{ArticleCommentsTab, ArticleFavoriteTab, ArticleTagsTab};
 use crate::ui::core::page::{Form, Page, PageAction, PageState, UIContext};
 use crate::ui::core::tables::{TableAction};
+use crate::ui::notebook::NoteBook;
 
 fn entity_ident_to_command(entity_ident: &EntityIdent) -> ArticleCommand {
     match entity_ident {
@@ -27,7 +28,7 @@ fn entity_ident_to_command(entity_ident: &EntityIdent) -> ArticleCommand {
         EntityIdent::ArticleListFollowed(user_id) => {
             ArticleCommand::ListFollowed(*user_id)
         }
-        EntityIdent::ArticleListTag(tag_id) => {
+        EntityIdent::ArticleListTag(tag_id, _tag_name) => {
             ArticleCommand::ListTag(*tag_id)
         }
         EntityIdent::ArticlePopularList => {
@@ -41,13 +42,14 @@ fn entity_ident_to_command(entity_ident: &EntityIdent) -> ArticleCommand {
 
 pub struct ArticleTable {
     list_identity: EntityIdent,
+    title: Option<String>,
     articles: Vec<ArticleListItem>,
     event_bus: UIBus,
     should_close: bool,
 }
 
 impl Page for ArticleTable {
-    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext) -> PageAction {
+    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext, _cache: &mut CommonMarkCache) -> PageAction {
         let mut page_action = PageAction::None;
         ui.horizontal(|ui| {
             if ui.button("Reload").clicked() {
@@ -58,9 +60,6 @@ impl Page for ArticleTable {
                 if ui.button("New").clicked() {
                     page_action = PageAction::AddPage(Box::new(ArticleEdit::new_create(ArticleUI::new(ui_context.user_id()))));
                 }
-            }
-            if ui.button("Close").clicked() {
-                self.should_close = true;
             }
         });
         let table_action = show_articles_table(ui, &self.articles, ui_context, false);
@@ -85,6 +84,9 @@ impl Page for ArticleTable {
             match msg {
                 UIResult::Article(ArticleResult::ArticleList(article_result)) => {
                     self.articles = article_result;
+                    if let EntityIdent::ArticleListTag(_tag_id,tag_name ) = &self.list_identity {
+                        self.title = Some(format!("Articles: {}", tag_name));
+                    }
                 }
                 UIResult::Deleted(id) => {
                     self.articles.retain(|a| a.id != id);
@@ -99,9 +101,9 @@ impl Page for ArticleTable {
         }
     }
     fn title(&self, ui_context: &UIContext) -> &str {
-        match self.list_identity {
+        match &self.list_identity {
             EntityIdent::ArticleListAuthor(author_id) => {
-                if ui_context.user_id() == author_id {
+                if ui_context.user_id() == *author_id {
                     "My Articles"
                 } else {
                     "Authors Articles"
@@ -113,8 +115,12 @@ impl Page for ArticleTable {
             EntityIdent::ArticleListFollowed(_user_id) => {
                 "Feed"
             }
-            EntityIdent::ArticleListTag(_tag_id) => {
-                "Tag Articles"
+            EntityIdent::ArticleListTag(_tag_id, _tag_name) => {
+                if let Some(title) = &self.title {
+                    title
+                } else {
+                    "Article Tags"
+                }
             }
             EntityIdent::ArticlePopularList => {
                 "Popular"
@@ -139,6 +145,7 @@ impl ArticleTable {
     pub fn new(list_identity: EntityIdent) -> Self {
         Self {
             list_identity,
+            title: None,
             articles: Vec::new(),
             event_bus: UIBus::default(),
             should_close: false,
@@ -154,7 +161,7 @@ pub struct ArticlePopularTable {
 }
 
 impl Page for ArticlePopularTable {
-    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext) -> PageAction {
+    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext, _cache: &mut CommonMarkCache) -> PageAction {
         let mut page_action = PageAction::None;
         ui.horizontal(|ui| {
             if ui.button("Reload").clicked() {
@@ -165,9 +172,6 @@ impl Page for ArticlePopularTable {
                 if ui.button("New").clicked() {
                     page_action = PageAction::AddPage(Box::new(ArticleEdit::new_create(ArticleUI::new(ui_context.user_id()))));
                 }
-            }
-            if ui.button("Close").clicked() {
-                self.should_close = true;
             }
         });
         let table_action = show_popular_articles_table(ui, &self.articles, ui_context);
@@ -230,7 +234,6 @@ impl ArticlePopularTable {
     }
 }
 
-
 pub enum ArticleTab {
     Details,
     Tags,
@@ -238,11 +241,25 @@ pub enum ArticleTab {
     Comments,
 }
 
+impl TryFrom<usize> for ArticleTab {
+    type Error = ();
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Details),
+            1 => Ok(Self::Tags),
+            2 => Ok(Self::Favorites),
+            3 => Ok(Self::Comments),
+            _ => Err(()),
+        }
+    }
+}
+
 pub struct ArticleEdit {
     ident: EntityIdent,
+    title: Option<String>,
     article_form: Option<ArticleForm>,
     orig_article: Option<ArticleUI>,
-    current_tab: ArticleTab,
+    current_tab: usize,
     page_state: PageState,
     article_tags_tab: ArticleTagsTab,
     article_favorites_tab: ArticleFavoriteTab,
@@ -250,6 +267,8 @@ pub struct ArticleEdit {
     event_bus: UIBus,
     should_close: bool,
 }
+
+static ARTICLE_TABS: [&str; 4]  = ["Details", "Tags", "Favorites", "Comments"];
 
 impl Page for ArticleEdit {
     fn init(&mut self, tx: &mut CommandBus, _ui_context: &UIContext) {
@@ -260,7 +279,7 @@ impl Page for ArticleEdit {
             }
         }
     }
-    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext) -> PageAction {
+    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext, cache: &mut CommonMarkCache) -> PageAction {
         let mut page_action = PageAction::None;
         if self.article_form.is_none() {
             ui.label("Loading...");
@@ -271,6 +290,7 @@ impl Page for ArticleEdit {
                 match self.page_state {
                     PageState::Update => {
                         if ui.button("Update").clicked() {
+                            article_form.article.updated_at = core::time_now();
                             if let Some(orig_article) = &self.orig_article {
                                 self.event_bus.send_task(tx,UICommand::Article(ArticleCommand::Update(article_form.article.to_change_record(orig_article))));
                                 self.page_state = PageState::Updating;
@@ -305,51 +325,41 @@ impl Page for ArticleEdit {
                         }
                     }
                 }
-                if ui.button("Close").clicked() {
-                    self.should_close = true;
-                }
             });
-            ui.horizontal(|ui| {
-                if ui.selectable_label(matches!(self.current_tab, ArticleTab::Details), "Details").clicked() {
-                    self.current_tab = ArticleTab::Details;
-                }
-                if !matches!(self.page_state,PageState::Create) {
-                    if ui.selectable_label(matches!(self.current_tab, ArticleTab::Tags), "Tags").clicked() {
-                        self.current_tab = ArticleTab::Tags;
-                    }
-                    if ui.selectable_label(matches!(self.current_tab, ArticleTab::Favorites), "Favorites").clicked() {
-                        self.current_tab = ArticleTab::Favorites;
-                    }
-                    if ui.selectable_label(matches!(self.current_tab, ArticleTab::Comments), "Comments").clicked() {
-                        self.current_tab = ArticleTab::Comments;
-                    }
-                }
-            });
-            match self.current_tab {
-                ArticleTab::Details => {
-                    let ui_context = if self.page_state.is_enabled() { &ui_context.as_edit() } else { ui_context};                   
-                    article_form.show_ui(ui, tx, ui_context, &mut page_action);
-                }
-                ArticleTab::Tags => {
-                    if article_form.article.author_id==ui_context.user_id() {
-                        let admin_context = ui_context.as_admin();
-                        self.article_tags_tab.show_ui(ui, tx, &admin_context, &mut page_action);
-                    } else {
-                        self.article_tags_tab.show_ui(ui, tx, ui_context, &mut page_action);
-                    }
-                }
-                ArticleTab::Favorites => {
-                    self.article_favorites_tab.show_ui(ui, tx, ui_context, &mut page_action);
-                }
-                ArticleTab::Comments => {
-                    self.article_comments_tab.show_ui(ui, tx, ui_context, &mut page_action);
-                }
+            if !matches!(self.page_state,PageState::Create) {
+                NoteBook::new(4, &mut self.current_tab, |i| ARTICLE_TABS[i].into(),200.0, false).show(ui);
             }
+            if let Ok(current_tab) = ArticleTab::try_from(self.current_tab) {
+                match current_tab {
+                    ArticleTab::Details => {
+                        let ui_context = if self.page_state.is_enabled() { &ui_context.as_edit() } else { ui_context};                   
+                        article_form.show_ui(ui, tx, ui_context, &mut page_action, cache);
+                    }
+                    ArticleTab::Tags => {
+                        if article_form.article.author_id==ui_context.user_id() {
+                            let admin_context = ui_context.as_admin();
+                            self.article_tags_tab.show_ui(ui, tx, &admin_context, &mut page_action);
+                        } else {
+                            self.article_tags_tab.show_ui(ui, tx, ui_context, &mut page_action);
+                        }
+                    }
+                    ArticleTab::Favorites => {
+                        self.article_favorites_tab.show_ui(ui, tx, ui_context, &mut page_action);
+                    }
+                    ArticleTab::Comments => {
+                        self.article_comments_tab.show_ui(ui, tx, ui_context, &mut page_action);
+                    }
+                }
+            } 
         }
         page_action
     }
     fn title(&self, _ui_context: &UIContext) -> &str {
-        "Article"
+        if let Some(title) = &self.title {
+            title
+        } else {
+            "Article"
+        }
     }
     fn as_any(&self) -> &dyn Any {
         self
@@ -364,18 +374,21 @@ impl Page for ArticleEdit {
                     if let Some(article_form) = &self.article_form {
                         self.orig_article = Some(article_form.article.clone());
                         self.page_state = PageState::Show;
+                        self.title = Some(format!("\u{1f5b9} {}", article_form.article.title))
                     }
                 },
                 UIResult::Created => {
                     if let Some(article_form) = &self.article_form {
                         self.orig_article = Some(article_form.article.clone());
                         self.page_state = PageState::Show;
+                        self.title = Some(format!("\u{1f5b9} {}", article_form.article.title))
                     }
                 },
                 UIResult::DbError(msg) => {
                     emit(PageAction::AddError(msg));
                 },
                 UIResult::Article(ArticleResult::Article(article)) => {
+                    self.title = Some(format!("\u{1f5b9} {}", article.title));
                     self.article_form = Some(ArticleForm::new(article.clone()));
                     self.orig_article = Some(article);
                     self.page_state = PageState::Show;
@@ -404,11 +417,12 @@ impl ArticleEdit {
             article_favorites_tab: ArticleFavoriteTab::new(article_id),
             article_comments_tab: ArticleCommentsTab::new(article_id),
             article_form: None,
-            current_tab: ArticleTab::Details,
+            current_tab: 0,
             orig_article: None,
             page_state: PageState::Show,
             event_bus: UIBus::default(),
             should_close: false,
+            title: None,
         }
     }
 
@@ -419,11 +433,12 @@ impl ArticleEdit {
             article_favorites_tab: ArticleFavoriteTab::new(article.id),
             article_comments_tab: ArticleCommentsTab::new(article.id),
             article_form: Some(ArticleForm::new(article)),
-            current_tab: ArticleTab::Details,
+            current_tab: 0,
             orig_article: None,
             page_state: PageState::Create,
             event_bus: UIBus::default(),
             should_close: false,
+            title: Some("New Article".into())
         }
     }
 

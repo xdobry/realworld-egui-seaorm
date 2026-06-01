@@ -42,7 +42,7 @@ pub fn show_article_favorites_table(ui: &mut egui::Ui, favorites: &Vec<ArticleFa
                 let row_table_mode = if ui_context.is_user_or_admin(favorite.user_id) {
                     TableMode::Delete
                 } else {
-                    TableMode::Nothing
+                    TableMode::Link
                 };
                 row_table_mode.add_action_rows(&mut row, (favorite.user_id,favorite.article_id), "", &mut table_action, Some(favorite.user_id));
                 row.col(|ui| {

@@ -6,8 +6,6 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        // Replace the sample below with your own migration scripts
-
         manager.create_index(Index::create()
             .name("article_favorites_user_id_article_id_key")
             .table("article_favorites")

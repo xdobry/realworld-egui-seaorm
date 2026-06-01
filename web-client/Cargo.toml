@@ -7,9 +7,9 @@ edition = "2024"
 app-core = { package="core", path="../core" }
 command-bus = { path="../command-bus" }
 ui = { path="../ui" }
-eframe = { version="0.33.3"}
-egui = "0.33.3"
-egui_extras = "0.33.3"
+eframe = { workspace = true }
+egui = { workspace = true }
+egui_extras = { workspace = true }
 wasm-bindgen-futures = "0.4"
 web-sys = { version = "0.3", features = ["UrlSearchParams", "Window", "Location"] }
 poll-promise = { version = "0.3", features = ["web"] }

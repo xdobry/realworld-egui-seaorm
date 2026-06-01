@@ -9,9 +9,9 @@ core = { path="../core" }
 ui = { path="../ui" }
 command-bus = { path="../command-bus" }
 models = { path="../models" }
-eframe = "0.33.3"
-egui = "0.33.3"
-egui_extras = "0.33.3"
+eframe = { workspace = true }
+egui = { workspace = true }
+egui_extras = { workspace = true }
 tokio =  { version = "1.50.0", features=["full"] }
 sea-orm = { version = "2.0.0-rc", features = [ "sqlx-postgres", "runtime-tokio-native-tls", "macros" ] }
 dotenvy = "0.15.7"

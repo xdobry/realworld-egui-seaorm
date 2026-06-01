@@ -9,4 +9,5 @@ pub mod article_favorites;
 pub mod user_follows;
 pub mod login;
 pub mod register;
+pub mod notebook;
 

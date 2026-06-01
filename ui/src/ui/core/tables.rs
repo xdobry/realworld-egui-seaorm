@@ -16,6 +16,7 @@ pub enum TableMode {
     Select,
     Delete,
     Nothing,
+    Link,
 }
 
 impl TableMode {
@@ -49,6 +50,15 @@ impl TableMode {
                     if ui.button(ICON_DELETE).clicked() {
                         *table_action = TableAction::DeleteItem(primary_key)
                     }
+                    if let Some(link_uuid) = link_uuid {
+                        if ui.button(ICON_INFO).clicked() {
+                            *table_action = TableAction::LinkItem(link_uuid)
+                        }
+                    }
+                });
+            }
+            Self::Link => {
+                row.col(|ui| {
                     if let Some(link_uuid) = link_uuid {
                         if ui.button(ICON_INFO).clicked() {
                             *table_action = TableAction::LinkItem(link_uuid)

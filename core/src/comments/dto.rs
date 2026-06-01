@@ -1,5 +1,4 @@
-use models::entity::comments::{ActiveModel, Entity, Column, Model};
-use sea_orm::Iterable;
+use models::entity::comments::{Entity, Model};
 use sea_orm::{FromQueryResult, prelude::DateTimeWithTimeZone};
 use sea_orm::entity::prelude::*;
 use serde::{Serialize, Deserialize};

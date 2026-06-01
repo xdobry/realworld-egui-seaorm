@@ -16,7 +16,7 @@ pub struct Model {
     pub password_hash: String,
     #[sea_orm(column_type = "Text", nullable)]
     pub bio: Option<String>,
-    pub image: Option<String>,
+    pub image: Option<Vec<u8>>,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
     pub is_admin: bool,

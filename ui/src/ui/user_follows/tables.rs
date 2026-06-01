@@ -44,9 +44,13 @@ pub fn show_user_followers_table(ui: &mut egui::Ui, followers: &Vec<UserFollower
                 let row_table_mode = if ui_context.is_user_or_admin(follower.follower_id) {
                     TableMode::Delete
                 } else {
-                    TableMode::Nothing
+                    TableMode::Link
                 };
-                row_table_mode.add_action_rows(&mut row, (follower.follower_id,follower.followee_id), "", &mut table_action, None);
+                row_table_mode.add_action_rows(&mut row, (follower.follower_id,follower.followee_id), "", &mut table_action, Some(if show_followers {
+                    follower.follower_id
+                } else {
+                    follower.followee_id
+                }));
                 row.col(|ui| {
                     ui.label(&follower.follower_name);
                 });

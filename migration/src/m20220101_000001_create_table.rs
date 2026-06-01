@@ -17,7 +17,7 @@ impl MigrationTrait for Migration {
                     .col(string("email").unique_key())
                     .col(string("password_hash"))
                     .col(text_null("bio"))
-                    .col(text_null("image"))
+                    .col(binary_null("image"))
                     .col(timestamp_with_time_zone("created_at").default(Expr::current_timestamp()))
                     .col(timestamp_with_time_zone("updated_at").default(Expr::current_timestamp()))
                     .to_owned(),

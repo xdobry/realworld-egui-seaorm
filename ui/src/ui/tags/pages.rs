@@ -1,6 +1,7 @@
 use core::entities::EntityIdent;
 use std::any::Any;
 
+use egui_commonmark::CommonMarkCache;
 use models::Uuid;
 use models::entity::tags;
 use core::api::{UICommand, UIResult};
@@ -19,7 +20,7 @@ pub struct TagTable {
 }
 
 impl Page for TagTable {
-    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext) -> PageAction {
+    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext, _cache: &mut CommonMarkCache) -> PageAction {
         let mut page_action = PageAction::None;
         ui.horizontal(|ui| {
             if ui.button("Reload").clicked() {
@@ -29,9 +30,6 @@ impl Page for TagTable {
                 if ui.button("Create Tag").clicked() {
                     page_action = PageAction::AddPage(Box::new(TagEdit::new_create(TagUI::new())));
                 }
-            }
-            if ui.button("Close").clicked() {
-                self.should_close = true;
             }
         });
         let table_action = show_tags_table(ui, &self.tags, if ui_context.is_admin() {TableMode::EditDelete} else {TableMode::Select});
@@ -102,7 +100,7 @@ impl Page for TagEdit {
             }
         }
     }    
-    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext) -> PageAction {
+    fn show(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext, _cache: &mut CommonMarkCache) -> PageAction {
         let mut page_action = PageAction::None;
         if self.tag.is_none() {
             ui.label("Loading...");
@@ -146,10 +144,7 @@ impl Page for TagEdit {
                     }
                 }
                 if ui.button("Articles").clicked() {
-                    page_action = PageAction::Navigate(EntityIdent::ArticleListTag(tag.id));
-                }
-                if ui.button("Close").clicked() {
-                    self.should_close = true;
+                    page_action = PageAction::Navigate(EntityIdent::ArticleListTag(tag.id, tag.name.clone()));
                 }
             });
             ui.add_enabled_ui(self.page_state.is_enabled(), |ui| {

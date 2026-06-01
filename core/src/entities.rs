@@ -8,7 +8,7 @@ pub enum EntityIdent {
     ArticleListAuthor(Uuid),
     ArticleListFavorites(Uuid),
     ArticleListFollowed(Uuid),
-    ArticleListTag(Uuid),
+    ArticleListTag(Uuid, String),
     Comment(Uuid),
     Tag(Uuid),
     User(Uuid),

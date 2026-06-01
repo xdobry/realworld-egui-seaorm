@@ -59,3 +59,6 @@ or set **DATABASE_URL** env variable
     cargo run -- status
     ```
 
+# Manual Update
+
+    ALTER TABLE users ALTER COLUMN image TYPE bytea USING convert_to(image,'UTF8');
