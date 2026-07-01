@@ -1,7 +1,7 @@
 use sea_orm::entity::prelude::*;
 use serde::{Serialize, Deserialize};
 
-use crate::{article_favorites::api::{ArticleFavoriteCommand, ArticleFavoriteResult}, article_tags::api::{ArticleTagCommand, ArticleTagResult}, articles::api::{ArticleCommand, ArticleResult}, comments::api::{CommentCommand, CommentResult}, tags::api::{TagCommand, TagResult}, user_follows::api::{UserFollowerCommand, UserFollowerResult}, users::api::{UserCommand, UserResult}};
+use crate::{article_favorites::api::{ArticleFavoriteCommand, ArticleFavoriteResult}, article_tags::api::{ArticleTagCommand, ArticleTagResult}, articles::api::{ArticleCommand, ArticleResult}, comments::api::{CommentCommand, CommentResult}, images::api::{ImageCommand, ImageResult}, tags::api::{TagCommand, TagResult}, user_follows::api::{UserFollowerCommand, UserFollowerResult}, users::api::{UserCommand, UserResult}};
 
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -13,6 +13,7 @@ pub enum UICommand {
     ArticleFavorite(ArticleFavoriteCommand),
     Comment(CommentCommand),
     UserFollower(UserFollowerCommand),
+    Image(ImageCommand),
 }
 
 impl UICommand {
@@ -37,6 +38,9 @@ impl UICommand {
                 subcommand.has_access(auth_context)
             }
             UICommand::UserFollower(subcommand) => {
+                subcommand.has_access(auth_context)
+            }
+            UICommand::Image(subcommand) => {
                 subcommand.has_access(auth_context)
             }
         }
@@ -68,6 +72,7 @@ pub enum UIResult {
     Article(ArticleResult),
     User(UserResult),
     Tag(TagResult),
+    Image(ImageResult),
     ArticleTag(ArticleTagResult),
     ArticleFavorite(ArticleFavoriteResult),
     Comment(CommentResult),

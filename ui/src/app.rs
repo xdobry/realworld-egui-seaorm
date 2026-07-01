@@ -1,9 +1,9 @@
 use eframe::Storage;
 use egui::{Align, Layout, global_theme_preference_switch};
-use command_bus::{CommandBus, UIBus};
+use command_bus::{CommandBusUpdate, UIBus};
 use egui_commonmark::CommonMarkCache;
 use crate::ui::{articles::pages::{ArticleEdit, ArticlePopularTable, ArticleTable}, core::page::{DbError, Page, PageAction, UIContext}, login::{LoginAction, LoginForm}, notebook::NoteBook, register::{RegisterAction, RegisterForm}, tags::pages::{TagEdit, TagTable}, users::pages::{UserEdit, UserTable}};
-use core::{api::{UICommand, UIResult}, articles::dto::ArticleUI, entities::EntityIdent, tags::{api::{TagCommand, TagResult}, dto::TagListItem}, users::dto::LoginResponse};
+use core::{api::{UICommand, UIResult}, articles::dto::ArticleUI, entities::EntityIdent, tags::{api::{TagCommand, TagResult}, dto::TagListItem}, users::{api::UserResult, dto::LoginResponse}};
 use core::tags::dto::TagUI;
 use std::sync::{Arc, RwLock};
 
@@ -11,8 +11,8 @@ pub type SharedContext = Arc<RwLock<Option<LoginResponse>>>;
 
 
 pub struct FormsApp {
-    command_tx: CommandBus,
-    ui_bus: UIBus,
+    command_tx: CommandBusUpdate,
+    pub ui_bus: UIBus,
     pub selected_page: usize,
     pub pages: Vec<Box<dyn Page>>,
     pub about_window: bool,
@@ -41,7 +41,7 @@ impl FormsApp {
 
 
 impl FormsApp {
-    pub fn new(_storage: Option<&dyn Storage>, command_tx: CommandBus, shared_context: SharedContext) -> Self {
+    pub fn new(_storage: Option<&dyn Storage>, command_tx: CommandBusUpdate, shared_context: SharedContext) -> Self {
         Self {
             command_tx,
             pages: Vec::new(),
@@ -61,7 +61,7 @@ impl FormsApp {
 
 impl FormsApp {
     pub fn add_page<T: Page>(&mut self, mut page: T, ui_context: &UIContext) {
-        page.init(&mut self.command_tx, ui_context);
+        page.init(&mut self.command_tx.as_mut(), ui_context);
         self.pages.push(Box::new(page));
         self.selected_page = self.pages.len()-1;
     }
@@ -71,7 +71,7 @@ impl eframe::App for FormsApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
        self.command_tx.update();
         if !self.tags_requested {
-            self.ui_bus.send_task(&mut self.command_tx, UICommand::Tag(TagCommand::PopularTags));
+            self.ui_bus.send_task(&mut self.command_tx.as_mut(), UICommand::Tag(TagCommand::PopularTags));
             self.tags_requested = true;
         } else {
             if let Ok(result) = self.ui_bus.try_recv() {
@@ -79,8 +79,12 @@ impl eframe::App for FormsApp {
                     UIResult::Tag(TagResult::PopularTags(tags)) => {
                         self.popular_tags = tags;
                     },
+                    UIResult::User(UserResult::Login(login_response)) => {
+                        let mut ctx = self.shared_context.write().unwrap();
+                        *ctx = Some(login_response.clone());
+                        self.user_context = Some(login_response);
+                    }
                     _ => {
-
                     }
                 }
             }
@@ -90,7 +94,7 @@ impl eframe::App for FormsApp {
         if self.login_form.is_some() {
             let action = if let Some(login_form) = self.login_form.as_mut() {
                 egui::CentralPanel::default().show_inside(ui, |ui| {
-                    login_form.show(ui, &mut self.command_tx)
+                    login_form.show(ui, &mut self.command_tx.as_mut())
                 }).inner
             } else {
                 LoginAction::None
@@ -112,7 +116,7 @@ impl eframe::App for FormsApp {
         } else if self.register_form.is_some() {
             let action = if let Some(register_form) = self.register_form.as_mut() {
                 egui::CentralPanel::default().show_inside(ui, |ui| {
-                    register_form.show(ui, &mut self.command_tx)
+                    register_form.show(ui, self.command_tx.as_mut())
                 }).inner
             } else {
                 RegisterAction::None
@@ -246,7 +250,7 @@ impl eframe::App for FormsApp {
                 ).show(ui);
                 let mut actions = Vec::new();
                 for page in self.pages.iter_mut() {
-                    page.update(&mut self.command_tx, &ui_context, &mut |a| actions.push(a));
+                    page.update(&mut self.command_tx.as_mut(), &ui_context, &mut |a| actions.push(a));
                 }
                 self.pages.retain(|p| !p.should_close());
                 if let Some(close_index) = close_index {
@@ -260,7 +264,7 @@ impl eframe::App for FormsApp {
                 }
                 if self.pages.len() > self.selected_page {
                     let page_action = if let Some(page) = self.pages.get_mut(self.selected_page) {
-                        page.show(ui, &mut self.command_tx, &ui_context, &mut self.common_mark_cache)
+                        page.show(ui, &mut self.command_tx.as_mut(), &ui_context, &mut self.common_mark_cache)
                     } else {
                         PageAction::None
                     };

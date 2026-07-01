@@ -11,6 +11,7 @@ pub mod user_follows;
 pub mod api;
 pub mod dto;
 pub mod entities;
+pub mod images;
 
 pub fn time_now() -> DateTimeWithTimeZone { 
     chrono::Local::now().with_timezone(&chrono::Local::now().offset())

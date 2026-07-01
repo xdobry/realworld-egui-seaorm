@@ -9,3 +9,4 @@ pub mod comments;
 pub mod tags;
 pub mod user_follows;
 pub mod users;
+pub mod images;

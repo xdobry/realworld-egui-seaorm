@@ -1,4 +1,4 @@
-use core::{api::{UICommand, UIResult}, users::{api::{UserCommand, UserResult}, dto::{LoginResponse, LoginUser, RegisterUser}}};
+use core::{api::{UICommand, UIResult}, users::{api::{UserCommand, UserResult}, dto::{LoginResponse, RegisterUser}}};
 
 use command_bus::{CommandBus, UIBus};
 use egui::Color32;

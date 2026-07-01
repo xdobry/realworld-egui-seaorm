@@ -8,10 +8,12 @@ use crate::ui::{
     users::tables::show_users_table, utils::date_time_ft
 };
 use command_bus::{CommandBus, UIBus};
-use models::entity::users;
-use core::{articles::dto::ArticleUI, entities::EntityIdent};
+use models::entity::{images, users};
+use core::{articles::dto::ArticleUI, entities::EntityIdent, images::api::ImageCommand, new_uuid, time_now};
 use core::users::api::{UserCommand, UserResult};
 use core::api::{UICommand, UIResult};
+use std::fs;
+use rfd::FileDialog;
 
 #[derive(Default)]
 pub struct ArticleForm {
@@ -29,7 +31,33 @@ impl ArticleForm {
                 TextEdit::singleline(&mut self.article.title).desired_width(f32::INFINITY).show(ui);
                 ui.label("description");
                 TextEdit::singleline(&mut self.article.description).desired_width(f32::INFINITY).show(ui);
-                ui.label("body");
+                ui.horizontal(|ui| {
+                    ui.label("body");
+                    if ui.button("Add Image").clicked() {
+                        if let Some(path) = FileDialog::new()
+                            .add_filter("Image", &["png"])
+                            .pick_file()
+                        {
+                            let bytes = fs::read(&path);
+                            if let Ok(bytes) = bytes {
+                                let title = path.file_name().unwrap().display().to_string();
+                                let uuid = new_uuid();
+                                self.article.body.push_str(format!("![{}](blob://{})",title,uuid).as_str());
+                                let image = images::Model {
+                                    id: uuid,
+                                    mimetype: "img".into(),
+                                    title: title,
+                                    created_at: time_now(),
+                                    article_id: self.article.id,
+                                    data: bytes,
+                                };
+                                self.event_bus.send_task(tx, UICommand::Image(ImageCommand::Create(image))); 
+                            } else {
+                                println!("no bytes");
+                            }
+                        }
+                    }
+                });
                 TextEdit::multiline(&mut self.article.body).desired_width(f32::INFINITY).desired_rows(50).show(ui);
                 ui.horizontal(|ui| {
                     ui.label("author:");

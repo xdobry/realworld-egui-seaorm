@@ -8,7 +8,7 @@ use ui::app::FormsApp;
 use core::api::{UIResult};
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc::{self};
-use command_bus::{CommandBus, UITask};
+use command_bus::{CommandBus, CommandBusUpdate, UITask};
 use argon2::{self, Config};
 use dotenvy::dotenv;
 
@@ -53,7 +53,7 @@ fn main() -> Result<(), eframe::Error> {
                     }
                 });
             });
-            let command_bus = CommandBus::new(command_tx);
+            let command_bus = CommandBusUpdate::new(command_tx);
            
             Ok(Box::new(FormsApp::new(cc.storage, command_bus, shared_context)))
         }),

@@ -2,7 +2,7 @@
 resolver = "3"
 members = ["core","models", "ui", "fatclient","quic-server"
     ,"quic-client","server-core","command-bus"
-    ,"migration","web-client","web-server"
+    ,"migration","web-client","web-server","desktop-lite"
 ]
 
 

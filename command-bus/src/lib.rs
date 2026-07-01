@@ -1,4 +1,5 @@
 use core::api::{UICommand, UIResult};
+use std::ops::Deref;
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::mpsc::{self, error::TryRecvError};
 #[cfg(target_arch = "wasm32")]
@@ -6,7 +7,6 @@ use std::sync::mpsc::{self, TryRecvError};
 
 pub struct CommandBus {
     tx: mpsc::Sender<UITask>,
-    pub update_call: Option<Box<dyn FnMut() -> ()>>
 }
 
 impl CommandBus {
@@ -19,12 +19,37 @@ impl CommandBus {
     pub fn new(tx: mpsc::Sender<UITask>) -> Self {
         Self {
             tx,
-            update_call: None
         }
     }
+}
+
+pub struct CommandBusUpdate {
+    command_bus: CommandBus,
+    pub update_call: Option<Box<dyn FnMut() -> ()>>
+}
+
+impl AsRef<CommandBus> for CommandBusUpdate {
+    fn as_ref(&self) -> &CommandBus {
+        &self.command_bus
+    }
+}
+
+impl AsMut<CommandBus> for CommandBusUpdate {
+    fn as_mut(&mut self) -> &mut CommandBus {
+        &mut self.command_bus
+    }
+}
+
+impl CommandBusUpdate {
     pub fn update(&mut self) {
         if let Some(update_call) = self.update_call.as_mut() {
             update_call();
+        }
+    }
+    pub fn new(tx: mpsc::Sender<UITask>) -> Self {
+        Self {
+            command_bus: CommandBus::new(tx),
+            update_call: None,
         }
     }
 }
@@ -65,8 +90,8 @@ impl UITask {
 }
 
 pub struct UIBus {
-    result_rx: mpsc::Receiver<UIResult>,
-    result_tx: mpsc::Sender<UIResult>,
+    pub result_rx: mpsc::Receiver<UIResult>,
+    pub result_tx: mpsc::Sender<UIResult>,
 }
 
 impl UIBus {

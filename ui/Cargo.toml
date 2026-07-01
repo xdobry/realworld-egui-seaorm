@@ -12,3 +12,4 @@ egui = { workspace = true }
 egui_extras = { workspace = true }
 egui_commonmark = "0.23.0"
 image = "0.25.10"
+rfd = "0.17.2"

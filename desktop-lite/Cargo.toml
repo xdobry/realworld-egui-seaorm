@@ -1,0 +1,23 @@
+[package]
+name = "desktop-lite"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+server-core = { path="../server-core" }
+core = { path="../core" }
+ui = { path="../ui" }
+migration = { path="../migration" }
+command-bus = { path="../command-bus" }
+models = { path="../models" }
+eframe = { workspace = true }
+egui = { workspace = true }
+egui_extras = { workspace = true }
+tokio =  { version = "1.50.0", features=["full"] }
+sea-orm = { version = "2.0.0-rc", features = [ "sqlx-sqlite", "runtime-tokio-native-tls", "macros" ] }
+sea-orm-migration = { version = "2.0.0-rc"}
+dotenvy = "0.15.7"
+rust-argon2 = "3.0.0"
+env_logger = "0.11.11"
+dashmap = "6.2.1"
+log = "0.4.33"

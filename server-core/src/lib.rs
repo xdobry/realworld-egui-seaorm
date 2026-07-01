@@ -1,3 +1,4 @@
+use core::images::api::{ImageCommand, ImageResult};
 use core::tags::dto::TagListItem;
 use core::user_follows::api::{UserFollowerCommand, UserFollowerResult};
 use core::user_follows::dto::UserFollowerName;
@@ -13,7 +14,7 @@ use core::comments::dto::{CommentArticle, CommentAuthor};
 use core::tags::api::{TagCommand, TagResult};
 use core::users::api::{UserCommand, UserResult};
 use core::users::dto::{LoginResponse, UserContext};
-use models::entity::{article_favorites, articles, tags, comments, article_tags, user_follows, users};
+use models::entity::{article_favorites, articles, tags, comments, article_tags, user_follows, users, images};
 use sea_orm::sea_query::{PostgresQueryBuilder, Query, SqliteQueryBuilder};
 use sea_orm::{ActiveValue, DatabaseBackend, EntityTrait, ExprTrait, FromQueryResult, InsertResult, IntoActiveModel, JoinType, Order, QueryOrder, QuerySelect, Statement, prelude::*};
 use command_bus::ResponseChannel;
@@ -110,6 +111,7 @@ pub async fn handle_ui_command<T: CallContext>(cmd: UICommand, result_tx: &mut R
     let db_api = DBApi { db };
     let auth_context = AuthContext::new(call_context.user_id(), call_context.is_admin());
     if !cmd.has_access(&auth_context) {
+        println!("no access for cmd");
         result_tx.send(UIResult::DbError("no access".into()));
         return Ok(());
     }
@@ -620,7 +622,27 @@ pub async fn handle_ui_command<T: CallContext>(cmd: UICommand, result_tx: &mut R
                 }
             }
         }
+        UICommand::Image(image_command) => {
+            match image_command {
+                ImageCommand::Create(image) => {
+                    println!("create image");
+                    let _insert_res: InsertResult<images::ActiveModel> = images::Entity::insert(image.into()).exec(db).await?;
+                    result_tx.send(UIResult::Created);
+                    println!("image created");
 
+                }
+                ImageCommand::Delete(id) => {
+                    let _d = images::Entity::delete_by_id(id).exec(db).await?;
+                    result_tx.send(UIResult::Deleted(id));
+                }
+                ImageCommand::Load(blob_id) => {
+                    let image = images::Entity::find_by_id(blob_id).one(db).await?;
+                    if let Some(image) = image {
+                        result_tx.send(UIResult::Image(ImageResult::Image(image)));
+                    }
+                }
+            }
+        }
     }
     Ok(())
 }

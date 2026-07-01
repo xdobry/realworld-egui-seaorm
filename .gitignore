@@ -1,2 +1,3 @@
 **/target/
 web-client/dist
+database.db
