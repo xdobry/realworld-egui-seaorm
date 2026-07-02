@@ -1,10 +1,11 @@
 use std::sync::mpsc;
 use std::sync::{Arc, RwLock};
 use wasm_bindgen_futures::wasm_bindgen::JsCast;
-use app_core::api::UIResult;
-use command_bus::{CommandBus, ResponseChannel, UITask};
+use app_core::{api::{RemoteMessage, UIResult}, images::api::ImageResult};
+use command_bus::{CommandBus, CommandBusUpdate, ResponseChannel, UITask};
 use poll_promise::Promise;
 use ui::app::FormsApp;
+use ui::bytes_loader::{BlobEntry, BlobLoader};
 
 #[cfg(not(target_arch = "wasm32"))]
 compile_error!("This crate is intended to be compiled to wasm32 only");
@@ -37,7 +38,14 @@ fn main() {
                 Box::new(| cc | {
                     let egui_context = cc.egui_ctx.clone();
                     let (command_tx, command_rx) = mpsc::channel::<UITask>();
-                    let mut command_bus = CommandBus::new(command_tx);
+                    let loader_bus = CommandBus::new(command_tx.clone());
+                    let (image_result_tx, mut image_result_rx) = mpsc::channel::<UIResult>();
+                    let blob_loader = BlobLoader::new( loader_bus, image_result_tx);
+                    let blob_cache = blob_loader.cache.clone();
+                    let blob_loader = Arc::new(blob_loader);
+                    egui_context.add_bytes_loader(blob_loader);
+
+                    let mut command_bus = CommandBusUpdate::new(command_tx);
                     let shared_context: ui::app::SharedContext =  Arc::new(RwLock::new(None));
                     let mut pending_requests = Vec::new();
                     let client = reqwest::Client::new();
@@ -98,6 +106,12 @@ fn main() {
                             if let Ok(result) = item.poll_promise.try_take() {
                                 item.response_channel.send(result);
                             }
+                        }
+                        if let Ok(img_result) = image_result_rx.try_recv() {
+                            if let UIResult::Image(ImageResult::Image(model)) = img_result {
+                                let blob_uri = format!("blob://{}", model.id.to_string());
+                                blob_cache.insert(blob_uri, BlobEntry::Ready(Arc::from(model.data)));
+                            }                            
                         }
                     }));
 

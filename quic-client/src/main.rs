@@ -7,15 +7,15 @@ use std::{
 };
 
 use anyhow::{Result, anyhow};
-use app_core::api::{RemoteMessage, UIResult};
+use app_core::{api::{RemoteMessage, UIResult}, images::api::ImageResult};
 use clap::Parser;
-use command_bus::{CommandBus, UITask};
+use command_bus::{CommandBus, CommandBusUpdate, UITask};
 use egui::{Context, ViewportBuilder};
 use proto::crypto::rustls::QuicClientConfig;
 use rustls::pki_types::CertificateDer;
 use tokio::{runtime::Runtime, sync::mpsc};
 use tracing::{error, info};
-use ui::app::{FormsApp, SharedContext};
+use ui::{app::{FormsApp, SharedContext}, bytes_loader::{BlobEntry, BlobLoader}};
 use url::Url;
 
 mod common;
@@ -61,6 +61,7 @@ fn main() -> Result<(), eframe::Error> {
 
     let (command_tx, mut command_rx) = mpsc::channel::<UITask>(5);
 
+
     eframe::run_native(
         "RealWorld App - Egui Quic Client",
         options,
@@ -68,10 +69,24 @@ fn main() -> Result<(), eframe::Error> {
             let egui_context = cc.egui_ctx.clone();
             let shared_context: SharedContext =  Arc::new(RwLock::new(None));
             let shared_context_clone = shared_context.clone();
+
+            let loader_bus = CommandBus::new(command_tx.clone());
+            let (image_result_tx, mut image_result_rx) = mpsc::channel::<UIResult>(5);
+            let blob_loader = BlobLoader::new( loader_bus, image_result_tx);
+            let blob_cache = blob_loader.cache.clone();
+            egui_context.add_bytes_loader(Arc::new(blob_loader));
             
             thread::spawn(move || {
                 let rt = Runtime::new().unwrap();
                 rt.block_on(async move {
+                    tokio::spawn(async move {
+                        while let Some(msg) = image_result_rx.recv().await {
+                            if let UIResult::Image(ImageResult::Image(model)) = msg {
+                                let blob_uri = format!("blob://{}", model.id.to_string());
+                                blob_cache.insert(blob_uri, BlobEntry::Ready(Arc::from(model.data)));
+                            }
+                        }
+                    });  
                     // Example async task
                     let r = run(opt, &mut command_rx, egui_context, shared_context_clone).await;
                     if let Err(e) = r {
@@ -80,7 +95,7 @@ fn main() -> Result<(), eframe::Error> {
                 });
             });
 
-            let command_bus = CommandBus::new(command_tx);
+            let command_bus = CommandBusUpdate::new(command_tx);
 
             Ok(Box::new(FormsApp::new(cc.storage, command_bus, shared_context)))
         }),

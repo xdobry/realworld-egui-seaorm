@@ -13,6 +13,7 @@ use core::{articles::dto::ArticleUI, entities::EntityIdent, images::api::ImageCo
 use core::users::api::{UserCommand, UserResult};
 use core::api::{UICommand, UIResult};
 use std::fs;
+#[cfg(not(target_arch = "wasm32"))]
 use rfd::FileDialog;
 
 #[derive(Default)]
@@ -21,10 +22,44 @@ pub struct ArticleForm {
     pub user_list: Option<Vec<users::Model>>,
     pub user_list_opened: bool,
     event_bus: UIBus,
+    #[cfg(target_arch = "wasm32")]
+    pub file_upload: Option<poll_promise::Promise<Result<FileData, anyhow::Error>>>,
+}
+
+#[cfg(target_arch = "wasm32")]
+struct FileData {
+    pub path: String,
+    pub data: Vec<u8>,
 }
 
 impl ArticleForm {
     pub fn show_ui(&mut self, ui: &mut egui::Ui, tx: &mut CommandBus, ui_context: &UIContext, page_action: &mut PageAction, cache: &mut CommonMarkCache) {
+        #[cfg(target_arch = "wasm32")]
+        if let Some(promise) = self.file_upload.take() {
+            if promise.ready().is_some() {
+                match promise.block_and_take() {
+                    Ok(FileData { path, data }) => {
+                        let uuid = new_uuid();
+                        self.article.body.push_str(format!("![{}](blob://{})",path,uuid).as_str());
+                        let image = images::Model {
+                            id: uuid,
+                            mimetype: "img".into(),
+                            title: path,
+                            created_at: time_now(),
+                            article_id: self.article.id,
+                            data: data,
+                        };
+                        self.event_bus.send_task(tx, UICommand::Image(ImageCommand::Create(image)));
+                        self.file_upload = None;                  
+                    }
+                    Err(e) => {
+                        self.file_upload = None;                  
+                    }
+                }
+            } else {
+                self.file_upload = Some(promise);
+            }
+        }
         egui::ScrollArea::vertical().show(ui, |ui| {
             if ui_context.is_edit() {
                 ui.label("title");
@@ -34,8 +69,9 @@ impl ArticleForm {
                 ui.horizontal(|ui| {
                     ui.label("body");
                     if ui.button("Add Image").clicked() {
+                        #[cfg(not(target_arch = "wasm32"))]
                         if let Some(path) = FileDialog::new()
-                            .add_filter("Image", &["png"])
+                            .add_filter("Image", &["png","jpg","gif"])
                             .pick_file()
                         {
                             let bytes = fs::read(&path);
@@ -55,6 +91,25 @@ impl ArticleForm {
                             } else {
                                 println!("no bytes");
                             }
+                        }
+                        #[cfg(target_arch = "wasm32")]
+                        {
+                            use poll_promise::Promise;
+                            self.file_upload = Some(Promise::spawn_local(async {
+                                let file_selected = rfd::AsyncFileDialog::new()
+                                    .add_filter("Image", &["png","jpg","gif"])
+                                    .pick_file()
+                                    .await;
+                                if let Some(curr_file) = file_selected {
+                                    let buf = curr_file.read().await;
+                                    return Ok(FileData {
+                                        path: curr_file.file_name(),
+                                        data: buf,
+                                    });
+                                }
+                                // no file selected
+                                Err(anyhow::anyhow!("Upload: no file Selected"))
+                            }));
                         }
                     }
                 });
@@ -145,7 +200,9 @@ impl ArticleForm {
             article: article,
             user_list: None,
             user_list_opened: false, 
-            event_bus: UIBus::default(),          
+            event_bus: UIBus::default(),
+            #[cfg(target_arch = "wasm32")]
+            file_upload: None,       
         }
     }
 

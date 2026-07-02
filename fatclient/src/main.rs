@@ -1,3 +1,4 @@
+use core::images::api::ImageResult;
 use std::sync::{Arc, RwLock};
 use std::{env, thread};
 
@@ -5,6 +6,7 @@ use egui::ViewportBuilder;
 use sea_orm::Database;
 use server_core::{CallContext, handle_ui_command};
 use ui::app::FormsApp;
+use ui::bytes_loader::{BlobEntry, BlobLoader};
 use core::api::{UIResult};
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc::{self};
@@ -32,9 +34,23 @@ fn main() -> Result<(), eframe::Error> {
             let call_context = MyCallContext::new();
             let shared_context = call_context.shared_context.clone();
 
+            let loader_bus = CommandBus::new(command_tx.clone());
+            let (image_result_tx, mut image_result_rx) = mpsc::channel::<UIResult>(5);
+            let blob_loader = BlobLoader::new( loader_bus, image_result_tx);
+            let blob_cache = blob_loader.cache.clone();
+            egui_context.add_bytes_loader(Arc::new(blob_loader));
+
             thread::spawn(move || {
                 let rt = Runtime::new().unwrap();
                 rt.block_on(async move {
+                    tokio::spawn(async move {
+                        while let Some(msg) = image_result_rx.recv().await {
+                            if let UIResult::Image(ImageResult::Image(model)) = msg {
+                                let blob_uri = format!("blob://{}", model.id.to_string());
+                                blob_cache.insert(blob_uri, BlobEntry::Ready(Arc::from(model.data)));
+                            }
+                        }
+                    });                   
                     // Example async task
                     let db = Database::connect(database_url).await;
                     if let Ok(db) = db {
@@ -53,8 +69,8 @@ fn main() -> Result<(), eframe::Error> {
                     }
                 });
             });
+
             let command_bus = CommandBusUpdate::new(command_tx);
-           
             Ok(Box::new(FormsApp::new(cc.storage, command_bus, shared_context)))
         }),
     )
