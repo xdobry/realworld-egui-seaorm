@@ -1,5 +1,4 @@
 use core::api::{UICommand, UIResult};
-use std::ops::Deref;
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::mpsc::{self, error::TryRecvError};
 #[cfg(target_arch = "wasm32")]

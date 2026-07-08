@@ -1,9 +1,18 @@
 # Setup and run
 
-You will need [rust](https://rust-lang.org/) programming language and [postgres server](https://www.postgresql.org/) to run this software.
+You will need [rust](https://rust-lang.org/) programming language and optional [postgres server](https://www.postgresql.org/) to run this software.
 
 The project is multi crate cargo workspace.
 You can not build all creates in one step, because cargo does not support multiply target projects and web-client compile only for "wasm32-unknown-unknown" target.
+
+## Start stand alone sqlite based app
+
+This uses build in sqlite database. The database is a just file, which is created and initialized in current directory if needed.
+You do not need postgres server and database setup in this case.
+
+   ```sh
+   cargo run -p desktop-lite
+   ```
 
 ## Set up data base
 
@@ -23,11 +32,14 @@ You can also set the database url as env Variable "DATABASE_URL"
 
    Will add admin with email: *admin@email.com* and password: *admin_password*
 
+
+
 ## Start desktop fat client
 
    ```sh
    cargo run -p fatclient
    ```
+
 
 ## Start desktop quic server and client
 

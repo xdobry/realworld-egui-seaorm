@@ -6,7 +6,8 @@ The prototype concerns only parts of needed functionality and lacks some feature
 
 The project demonstrates multiple architectural variants:
 
-* **Fat client:** native (desktop) client connects directly to the SQL database
+* **Fat client:** native (desktop) client connects directly to the postgres SQL database
+* **Desktop Lite** native (desktop) client using own local sqlite file based database (no sql server needed)
 * **Client–server:** native (desktop) client communicates with a server via `QUIC`
 * **Web (WASM SPA):** egui-based WebAssembly client communicates with an `HTTP server` built with Axum.
 
